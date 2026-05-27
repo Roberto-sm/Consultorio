@@ -1,8 +1,10 @@
 package com.upsin.demo.services;
 
 import com.upsin.demo.models.Paciente;
+import com.upsin.demo.models.Psicologo;
 import com.upsin.demo.models.Usuario;
 import com.upsin.demo.repositories.PacienteRepository;
+import com.upsin.demo.repositories.PsicologoRepository;
 import com.upsin.demo.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,25 +19,49 @@ public class AuthService {
     @Autowired
     private PacienteRepository pacienteRepository;
 
-    // Esta etiqueta garantiza que ambas tablas se actualicen o ninguna lo haga
+    @Autowired
+    private PsicologoRepository psicologoRepository;
+
     @Transactional
     public Usuario registrarPaciente(Usuario nuevoUsuario) {
 
-        // 1. Forzamos el rol para evitar inyecciones de datos incorrectos
+        //  Forzamos el rol para evitar inyecciones de datos incorrectos
         nuevoUsuario.setRol("paciente");
 
-        // 2. Guardamos en la tabla 'usuarios'
-        // Al guardar, MySQL genera el ID y Spring Boot se lo inyecta a la variable usuarioGuardado
+        //  Guardamos en la tabla 'usuarios, se le asigna el id del usuario a la variable usuarioGuardado
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
-        // 3. Preparamos el registro para la tabla 'pacientes' usando ese mismo ID
+        //  Preparamos el registro para la tabla 'pacientes' usando ese mismo ID
         Paciente nuevoPaciente = new Paciente();
         nuevoPaciente.setUsuario(usuarioGuardado);
-        // Nota: Aún no tiene id_psicologo porque es un paciente nuevo
 
-        // 4. Guardamos en la tabla 'pacientes'
+        //  Guardamos en la tabla 'pacientes'
         pacienteRepository.save(nuevoPaciente);
 
         return usuarioGuardado;
     }
+
+    @Transactional
+    public Usuario registrarPsicologo(Usuario nuevoUsuario) {
+
+        // Forzamos el rol
+        nuevoUsuario.setRol("psicologo");
+
+        // Guardamos en la tabla 'usuarios'
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+
+        //  Creamos el perfil vacío en la tabla 'psicologos'
+        Psicologo nuevoPsicologo = new Psicologo();
+        nuevoPsicologo.setUsuario(usuarioGuardado);
+
+        // Por defecto, un psicólogo nuevo no es de planta.
+        // (Esto solo lo debería cambiar un administrador después)
+        nuevoPsicologo.setEsDePlanta(false);
+
+        //  Guardamos en la tabla 'psicologos'
+        psicologoRepository.save(nuevoPsicologo);
+
+        return usuarioGuardado;
+    }
 }
+
