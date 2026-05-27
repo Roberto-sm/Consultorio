@@ -1,0 +1,38 @@
+package com.upsin.demo.controllers;
+
+import com.upsin.demo.models.Cita;
+import com.upsin.demo.repositories.CitaRepository;
+import com.upsin.demo.services.CitaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/citas")
+public class CitaController {
+
+    @Autowired
+    private CitaRepository citaRepository;
+
+    @Autowired
+    private CitaService citaService; // Inyectamos nuestro nuevo servicio
+
+    // Obtener todas las citas del sistema (Ideal para el perfil Administrador)
+    @GetMapping
+    public List<Cita> obtenerTodas() {
+        return citaRepository.findAll();
+    }
+
+    // Obtener solo las citas de un psicólogo en específico (Para pintar su calendario)
+    @GetMapping("/psicologo/{id}")
+    public List<Cita> obtenerPorPsicologo(@PathVariable Integer id) {
+        return citaRepository.findByPsicologoId(id);
+    }
+
+    // NUEVO ENDPOINT: Recibe una petición POST para crear una cita
+    @PostMapping("/primera-cita")
+    public Cita agendarPrimeraCita(@RequestBody Cita cita) {
+        return citaService.agendarPrimeraCita(cita);
+    }
+}
