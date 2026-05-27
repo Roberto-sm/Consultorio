@@ -12,8 +12,15 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    // endpoint para pacientes
     @PostMapping("/registro")
     public Usuario registrarPaciente(@RequestBody Usuario usuario) {
         return authService.registrarPaciente(usuario);
+    }
+
+    // endpoint para psicologos
+    @PostMapping("/registro/psicologo")
+    public Usuario registrarPsicologo(@RequestBody Usuario usuario) {
+        return authService.registrarPsicologo(usuario);
     }
 }
