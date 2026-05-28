@@ -7,6 +7,7 @@ import com.upsin.demo.repositories.PacienteRepository;
 import com.upsin.demo.repositories.PsicologoRepository;
 import com.upsin.demo.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +23,17 @@ public class AuthService {
     @Autowired
     private PsicologoRepository psicologoRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Transactional
     public Usuario registrarPaciente(Usuario nuevoUsuario) {
 
         //  Forzamos el rol para evitar inyecciones de datos incorrectos
         nuevoUsuario.setRol("paciente");
+
+        String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
+        nuevoUsuario.setContraseña(hash);
 
         //  Guardamos en la tabla 'usuarios, se le asigna el id del usuario a la variable usuarioGuardado
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
@@ -47,6 +54,9 @@ public class AuthService {
         // Forzamos el rol
         nuevoUsuario.setRol("psicologo");
 
+        String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
+        nuevoUsuario.setContraseña(hash);
+
         // Guardamos en la tabla 'usuarios'
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
@@ -54,8 +64,7 @@ public class AuthService {
         Psicologo nuevoPsicologo = new Psicologo();
         nuevoPsicologo.setUsuario(usuarioGuardado);
 
-        // Por defecto, un psicólogo nuevo no es de planta.
-        // (Esto solo lo debería cambiar un administrador después)
+        // Por defecto, un psicólogo nuevo no es de planta. Esto solo lo debería cambiar un administrador después
         nuevoPsicologo.setEsDePlanta(false);
 
         //  Guardamos en la tabla 'psicologos'
