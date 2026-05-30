@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.upsin.demo.dto.LoginRequest;
+import com.upsin.demo.dto.AuthResponse;
 
 @Service
 public class AuthService {
@@ -32,6 +34,7 @@ public class AuthService {
         //  Forzamos el rol para evitar inyecciones de datos incorrectos
         nuevoUsuario.setRol("paciente");
 
+        // Encriptacion de contraseñas
         String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
         nuevoUsuario.setContraseña(hash);
 
@@ -54,6 +57,7 @@ public class AuthService {
         // Forzamos el rol
         nuevoUsuario.setRol("psicologo");
 
+        // Encriptacion de contraseñas
         String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
         nuevoUsuario.setContraseña(hash);
 
@@ -72,5 +76,31 @@ public class AuthService {
 
         return usuarioGuardado;
     }
+
+    public AuthResponse login(LoginRequest request) {
+
+        // Busca al usuario por correo
+        Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
+                .orElseThrow(() -> new RuntimeException("Error: Correo no encontrado"));
+
+        // matches(contraseña_plana_de_postman, contraseña_hasheada_de_mysql)
+        boolean esValida = passwordEncoder.matches(request.getContraseña(), usuario.getContraseña());
+
+        if (!esValida) {
+            throw new RuntimeException("Error: Contraseña incorrecta");
+        }
+
+        // mensaje de exito
+        AuthResponse response = new AuthResponse();
+        response.setMensaje("Login exitoso");
+        response.setRol(usuario.getRol());
+        response.setIdUsuario(usuario.getId());
+
+        // Por ahora simularemos un token. El siguiente paso será generar un JWT real.
+        response.setToken("token-simulado-para-" + usuario.getCorreo());
+
+        return response;
+    }
+
 }
 
