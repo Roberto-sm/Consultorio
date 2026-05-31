@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.upsin.demo.dto.LoginRequest;
 import com.upsin.demo.dto.AuthResponse;
+import com.upsin.demo.config.JwtUtil;
 
 @Service
 public class AuthService {
@@ -27,6 +28,9 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Transactional
     public Usuario registrarPaciente(Usuario nuevoUsuario) {
@@ -97,7 +101,8 @@ public class AuthService {
         response.setIdUsuario(usuario.getId());
 
         // Por ahora simularemos un token. El siguiente paso será generar un JWT real.
-        response.setToken("token-simulado-para-" + usuario.getCorreo());
+        String tokenReal = jwtUtil.generarToken(usuario.getCorreo(), usuario.getRol());
+        response.setToken(tokenReal);
 
         return response;
     }

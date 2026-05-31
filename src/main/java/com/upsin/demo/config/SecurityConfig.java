@@ -1,18 +1,22 @@
 package com.upsin.demo.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Importante
 
 @Configuration
 public class SecurityConfig {
 
-    //herramienta que encriptará las contraseñas
+    @Autowired
+    private JwtFilter jwtFilter; // Filtro para autenticar el header
+
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder() {  // herramienta que encriptará las contraseñas
         return new BCryptPasswordEncoder();
     }
 
@@ -22,8 +26,13 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Desactivamos protección de formularios (usamos REST)
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Permitimos todas las peticiones por ahora
-                );
+
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .anyRequest().authenticated()
+                        // CUALQUIER OTRA RUTA exigirá un token válido
+                )
+                // Colocamos nuestro filtro de JWT antes del filtro de seguridad estándar
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
