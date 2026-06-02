@@ -9,7 +9,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.Collections;
+import java.util.List;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -33,8 +36,13 @@ public class JwtFilter extends OncePerRequestFilter {
             // Si el token es válido, identificamos al usuario y le damos acceso
             if (jwtUtil.validarToken(token)) {
                 String correo = jwtUtil.extraerCorreo(token);
+                String rol = jwtUtil.extraerRol(token);
 
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(correo, null, new ArrayList<>());
+                List<GrantedAuthority> authorities = Collections.singletonList(
+                        new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase())
+                );
+
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(correo, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

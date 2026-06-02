@@ -45,4 +45,13 @@ public class JwtUtil {
             return false; // Si el token caducó o fue modificado
         }
     }
+
+    public String extraerRol(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("rol", String.class);
+    }
 }
