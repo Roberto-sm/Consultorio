@@ -1,11 +1,16 @@
 package com.upsin.demo.services;
 
+import com.upsin.demo.models.Cita;
 import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Psicologo;
+import com.upsin.demo.repositories.CitaRepository;
 import com.upsin.demo.repositories.PacienteRepository;
 import com.upsin.demo.repositories.PsicologoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 public class PacienteService {
@@ -16,6 +21,10 @@ public class PacienteService {
     @Autowired
     private PsicologoRepository psicologoRepository;
 
+    @Autowired
+    private CitaRepository citaRepository;
+
+    @Transactional
     public Paciente derivarPaciente(Integer idPaciente, Integer idNuevoPsicologo) {
 
         //  Buscamos al paciente
@@ -29,6 +38,14 @@ public class PacienteService {
         // Validamos que no lo estén derivando a otro psicólogo de planta
         if (nuevoPsicologo.getEsDePlanta() != null && nuevoPsicologo.getEsDePlanta()) {
             throw new RuntimeException("Error: No puedes derivar a un paciente a otro psicólogo de triaje");
+        }
+
+        Optional<Cita> citaPendiente = citaRepository.findFirstByPacienteIdAndEstado(idPaciente, "pendiente");
+
+        if (citaPendiente.isPresent()) {
+            Cita cita = citaPendiente.get();
+            cita.setEstado("finalizada");
+            citaRepository.save(cita);
         }
 
         //  Hacemos la transferencia oficial
