@@ -17,18 +17,30 @@ public class CitaService {
     private PsicologoRepository psicologoRepository;
 
     public Cita agendarPrimeraCita(Cita nuevaCita) {
-        // 1. Buscamos al psicólogo de planta
+        Integer idPaciente = nuevaCita.getPaciente().getId();
+
+        // --- Un paciente solo puede tener UNA cita activa ---
+        if (citaRepository.existsByPacienteIdAndEstado(idPaciente, "pendiente")) {
+            throw new RuntimeException("Error: El paciente ya tiene una cita pendiente activa.");
+        }
+
+        // Buscamos al psicólogo de planta
         Psicologo psicologoDePlanta = psicologoRepository.findFirstByEsDePlantaTrue()
                 .orElseThrow(() -> new RuntimeException("Error: No hay psicólogo de planta disponible"));
 
-        // 2. Le asignamos este psicólogo a la cita
+        if (citaRepository.existsByPsicologoIdAndFechaHoraAndEstado(
+                psicologoDePlanta.getId(), nuevaCita.getFechaHora(), "pendiente")) {
+            throw new RuntimeException("Error: El horario seleccionado ya está ocupado. Por favor, elige otra hora.");
+        }
+
+        //  Le asignamos este psicólogo a la cita
         nuevaCita.setPsicologo(psicologoDePlanta);
 
-        // 3. Establecemos las reglas iniciales
+        //  Establecemos las reglas iniciales
         nuevaCita.setEstado("pendiente");
         nuevaCita.setEsPrimera(true);
 
-        // 4. Guardamos la cita en la base de datos
+        //  Guardamos la cita en la base de datos
         return citaRepository.save(nuevaCita);
     }
 }

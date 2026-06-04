@@ -3,7 +3,7 @@ package com.upsin.demo.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -24,13 +24,13 @@ public class Cita {
     @JoinColumn(name = "id_psicologo", nullable = false)
     private Psicologo psicologo;
 
-    @Column(nullable = false)
-    private LocalDate fecha;
+    @Column(name = "fecha_hora", nullable = false)
+    private LocalDateTime fechaHora;
 
-    // El estado (pendiente, completada, cancelada, etc.)
-    private String estado;
+    @Column(nullable = false)
+    private String estado;     // El estado (pendiente, completada, cancelada, etc.)
 
     // Para saber si es la primera cita (triaje)
-    @Column(name = "es_primera")
+    @Column(name = "es_primera", nullable = false)
     private Boolean esPrimera;
 }
