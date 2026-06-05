@@ -16,7 +16,7 @@ public class CitaController {
     private CitaRepository citaRepository;
 
     @Autowired
-    private CitaService citaService; // Inyectamos nuestro nuevo servicio
+    private CitaService citaService;
 
     // Obtener todas las citas del sistema (Ideal para el perfil Administrador)
     @GetMapping
@@ -35,4 +35,7 @@ public class CitaController {
     public Cita agendarPrimeraCita(@RequestBody Cita cita) {
         return citaService.agendarPrimeraCita(cita);
     }
+
+    @PostMapping("/seguimiento")
+    public Cita agendarCitaSeguimiento(@RequestBody Cita cita) { return citaService.agendarCitaSeguimiento(cita); }
 }
