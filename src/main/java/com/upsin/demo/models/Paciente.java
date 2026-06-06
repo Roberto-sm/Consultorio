@@ -21,4 +21,7 @@ public class Paciente {
     @ManyToOne
     @JoinColumn(name = "id_psicologo")
     private Psicologo psicologo;
+
+    @Column(name = "penalizacion_activa")
+    private Boolean penalizacionActiva = false;
 }
