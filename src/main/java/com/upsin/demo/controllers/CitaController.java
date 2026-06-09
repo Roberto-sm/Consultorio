@@ -45,4 +45,10 @@ public class CitaController {
     public Cita aprobarCita(@PathVariable Integer id) {
         return citaService.aprobarCita(id);
     }
+
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @PutMapping("/{id}/rechazar")
+    public Cita rechazarCita(@PathVariable Integer id) {
+        return citaService.rechazarCita(id);
+    }
 }

@@ -167,6 +167,20 @@ public class CitaService {
         return citaRepository.save(cita);
     }
 
+    public Cita rechazarCita(Integer idCita) {
+        Cita cita = citaRepository.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
+
+        // Solo se puede rechazar si estaba esperando aprobación
+        if (!cita.getEstado().equals("pendiente")) {
+            throw new RuntimeException("Error: Solo puedes rechazar citas que estén pendientes de aprobación.");
+        }
+
+        cita.setEstado("rechazada");
+
+        return citaRepository.save(cita);
+    }
+
     private void validarReglasDeHorario(LocalDateTime fechaHora) {
 
         // Anticipación mínima (Al menos el día de mañana)
