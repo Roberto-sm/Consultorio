@@ -4,6 +4,7 @@ import com.upsin.demo.models.Cita;
 import com.upsin.demo.repositories.CitaRepository;
 import com.upsin.demo.services.CitaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,4 +39,10 @@ public class CitaController {
 
     @PostMapping("/seguimiento")
     public Cita agendarCitaSeguimiento(@RequestBody Cita cita) { return citaService.agendarCitaSeguimiento(cita); }
+
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @PutMapping("/{id}/aprobar")
+    public Cita aprobarCita(@PathVariable Integer id) {
+        return citaService.aprobarCita(id);
+    }
 }

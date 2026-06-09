@@ -150,6 +150,23 @@ public class CitaService {
         return citaRepository.save(cita);
     }
 
+    public Cita aprobarCita(Integer idCita) {
+        // Buscamos la cita por su ID
+        Cita cita = citaRepository.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
+
+        // Solo se pueden aprobar citas que estén esperando aprobación
+        if (!cita.getEstado().equals("pendiente")) {
+            throw new RuntimeException("Error: Esta cita no está pendiente de aprobación (Estado actual: " + cita.getEstado() + ")");
+        }
+
+        // Cambiamos el estado oficialmente
+        cita.setEstado("confirmada");
+
+        // Guardamos los cambios en MySQL
+        return citaRepository.save(cita);
+    }
+
     private void validarReglasDeHorario(LocalDateTime fechaHora) {
 
         // Anticipación mínima (Al menos el día de mañana)
