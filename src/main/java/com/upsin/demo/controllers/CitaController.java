@@ -51,4 +51,10 @@ public class CitaController {
     public Cita rechazarCita(@PathVariable Integer id) {
         return citaService.rechazarCita(id);
     }
+
+    @PreAuthorize("hasAnyRole('PACIENTE', 'PSICOLOGO')")
+    @PutMapping("/{id}/cancelar")
+    public Cita cancelarCita(@PathVariable Integer id) {
+        return citaService.cancelarCita(id);
+    }
 }
