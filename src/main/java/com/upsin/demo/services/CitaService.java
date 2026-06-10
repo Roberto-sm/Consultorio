@@ -124,32 +124,18 @@ public class CitaService {
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
-        //  Buscamos al usuario dueño de ese token
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String correoToken = auth.getName();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(correoToken)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
-
-        // Obtenemos el ID real seguro
-        Integer idPacienteReal = usuarioLogueado.getId();
-        Paciente pacienteReal = pacienteRepository.findById(idPacienteReal)
-                .orElseThrow(() -> new RuntimeException("Error: Paciente no encontrado en la base de datos."));
-
         // Validamos que la cita sea cancelable
         String estadoActual = cita.getEstado();
         if (estadoActual.equals("cancelada") || estadoActual.equals("finalizada")
                 || estadoActual.equals("rechazada") || estadoActual.equals("no_asistio")) {
             throw new RuntimeException("Error: La cita ya no puede ser cancelada (Estado actual: " + estadoActual + ").");        }
 
+        //  Buscamos al usuario dueño de ese token
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String correoToken = auth.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(correoToken)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
-        // REGLA 6: Penalización si cancela con menos de 20 horas de anticipación
-        long horasFaltantes = ChronoUnit.HOURS.between(LocalDateTime.now(), cita.getFechaHora());
-
-        if (horasFaltantes < 20) {
-            Paciente paciente = cita.getPaciente();
-            paciente.setPenalizacionActiva(true);
-            pacienteRepository.save(paciente);
-        }
 
         // 4. LÓGICA DE PENALIZACIÓN (Solo aplica si es el paciente quien cancela)
         if (usuarioLogueado.getRol().equalsIgnoreCase("paciente")) {
@@ -158,6 +144,8 @@ public class CitaService {
             if (!cita.getPaciente().getId().equals(usuarioLogueado.getId())) {
                 throw new RuntimeException("Error: cita no encontrada");
             }
+            if (estadoActual.equals("confirmada")) {
+                long horasFaltantes = ChronoUnit.HOURS.between(LocalDateTime.now(), cita.getFechaHora());
 
                 if (horasFaltantes < 20) {
                 // Multa aplicada
@@ -165,16 +153,22 @@ public class CitaService {
                 paciente.setPenalizacionActiva(true);
                 pacienteRepository.save(paciente);
             }
-        } else if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+        }
+            cita.setEstado("cancelada");}
+
+
+            else if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
 
             // Verificamos que el psicólogo no cancele la cita de otro doctor
             if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
                 throw new RuntimeException("Error: cita no encontrada");
             }
-            // (Si el doctor cancela, no hay multa para nadie)
+            if (estadoActual.equals("pendiente")) {
+                throw new RuntimeException("Error: Para solicitudes pendientes, utiliza el botón 'Rechazar'.");
+            }
+            cita.setEstado("cancelada");
         }
 
-        cita.setEstado("cancelada");
         return citaRepository.save(cita);
     }
 
@@ -188,9 +182,16 @@ public class CitaService {
             throw new RuntimeException("Error: Esta cita no está pendiente de aprobación (Estado actual: " + cita.getEstado() + ")");
         }
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error de seguridad: Esta cita pertenece a otro psicólogo.");
+        }
+
         // Cambiamos el estado oficialmente
         cita.setEstado("confirmada");
-
         // Guardamos los cambios en MySQL
         return citaRepository.save(cita);
     }
@@ -202,6 +203,15 @@ public class CitaService {
         // Solo se puede rechazar si estaba esperando aprobación
         if (!cita.getEstado().equals("pendiente")) {
             throw new RuntimeException("Error: Solo puedes rechazar citas que estén pendientes de aprobación.");
+        }
+
+        // CANDADO DE SEGURIDAD: ¿Es su cita?
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error de seguridad: No puedes rechazar una cita asignada a otro psicólogo.");
         }
 
         cita.setEstado("rechazada");
