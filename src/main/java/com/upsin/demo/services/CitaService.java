@@ -53,6 +53,12 @@ public class CitaService {
         // Forzamos la identidad en la cita
         nuevaCita.setPaciente(pacienteReal);
 
+
+
+        if (pacienteReal.getPenalizacionActiva() != null && pacienteReal.getPenalizacionActiva()) {
+            throw new RuntimeException("Error: Tienes una penalización pendiente del 50% por cancelación tardía. Debes liquidar tu adeudo antes de agendar una nueva cita.");
+        }
+
         // Un paciente solo puede tener UNA cita activa
         if (citaRepository.existsByPacienteIdAndEstado(idPacienteReal, "pendiente")) {
             throw new RuntimeException("Error: El paciente ya tiene una cita pendiente activa.");
@@ -65,6 +71,11 @@ public class CitaService {
         // Evitar empalmes
         if (citaRepository.existsByPsicologoIdAndFechaHoraAndEstado(
                 psicologoDePlanta.getId(), nuevaCita.getFechaHora(), "pendiente")) {
+            throw new RuntimeException("Error: El horario seleccionado ya está ocupado. Por favor, elige otra hora.");
+        }
+
+        if (citaRepository.existsByPsicologoIdAndFechaHoraAndEstado(
+                psicologoDePlanta.getId(), nuevaCita.getFechaHora(), "confirmada")) {
             throw new RuntimeException("Error: El horario seleccionado ya está ocupado. Por favor, elige otra hora.");
         }
 
@@ -94,6 +105,10 @@ public class CitaService {
         // Forzamos la identidad en la cita
         nuevaCita.setPaciente(pacienteReal);
 
+        if (pacienteReal.getPenalizacionActiva() != null && pacienteReal.getPenalizacionActiva()) {
+            throw new RuntimeException("Error: Tienes una penalización pendiente del 50% por cancelación tardía. Debes liquidar tu adeudo antes de agendar una nueva cita.");
+        }
+
         // Validamos si el paciente ya fue derivado a un especialista
         if (pacienteReal.getPsicologo() == null) {
             throw new RuntimeException("Error: El paciente aún no tiene un psicólogo asignado. Debe agendar una primera cita de triaje.");
@@ -110,7 +125,13 @@ public class CitaService {
         // Regla de Empalme
         if (citaRepository.existsByPsicologoIdAndFechaHoraAndEstado(
                 especialista.getId(), nuevaCita.getFechaHora(), "pendiente")) {
-            throw new RuntimeException("Error: El horario del especialista ya está ocupado. Por favor, elige otra hora.");
+            throw new RuntimeException("Error: El horario seleccionado ya está ocupado. Por favor, elige otra hora.");
+        }
+
+
+        if (citaRepository.existsByPsicologoIdAndFechaHoraAndEstado(
+                especialista.getId(), nuevaCita.getFechaHora(), "confirmada")) {
+            throw new RuntimeException("Error: El horario seleccionado ya está ocupado. Por favor, elige otra hora.");
         }
 
         nuevaCita.setPsicologo(especialista);
@@ -177,14 +198,14 @@ public class CitaService {
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
         // Solo se pueden aprobar citas que estén esperando aprobación
         if (!cita.getEstado().equals("pendiente")) {
             throw new RuntimeException("Error: Esta cita no está pendiente de aprobación (Estado actual: " + cita.getEstado() + ")");
         }
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: Esta cita pertenece a otro psicólogo.");
@@ -216,6 +237,46 @@ public class CitaService {
 
         cita.setEstado("rechazada");
 
+        return citaRepository.save(cita);
+    }
+
+    public Cita finalizarCita(Integer idCita) {
+        Cita cita = citaRepository.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
+
+        if (!cita.getEstado().equals("confirmada")) {
+            throw new RuntimeException("Error: Solo puedes finalizar citas que estén en estado 'confirmada'.");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error de seguridad: No puedes finalizar la cita de otro psicólogo.");
+        }
+
+        cita.setEstado("finalizada");
+        return citaRepository.save(cita);
+    }
+
+    public Cita registrarNoShow(Integer idCita) {
+        Cita cita = citaRepository.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
+
+        if (!cita.getEstado().equals("confirmada")) {
+            throw new RuntimeException("Error: Solo puedes marcar como No-Show citas que estén 'confirmada'.");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error de seguridad: No puedes modificar la cita de otro psicólogo.");
+        }
+
+        cita.setEstado("no_asistio");
         return citaRepository.save(cita);
     }
 

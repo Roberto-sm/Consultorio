@@ -57,4 +57,16 @@ public class CitaController {
     public Cita cancelarCita(@PathVariable Integer id) {
         return citaService.cancelarCita(id);
     }
+
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @PutMapping("/{id}/finalizar")
+    public Cita finalizarCita(@PathVariable Integer id) {
+        return citaService.finalizarCita(id);
+    }
+
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @PutMapping("/{id}/no-show")
+    public Cita registrarNoShow(@PathVariable Integer id) {
+        return citaService.registrarNoShow(id);
+    }
 }
