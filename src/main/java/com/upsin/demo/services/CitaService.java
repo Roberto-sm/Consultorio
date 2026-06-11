@@ -36,14 +36,7 @@ public class CitaService {
     public Cita agendarPrimeraCita(Cita nuevaCita) {
 
         validarReglasDeHorario(nuevaCita.getFechaHora());
-
-        //  Extraemos el correo directamente del Token
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String correoToken = auth.getName();
-
-        //  Buscamos al usuario dueño de ese token
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(correoToken)
-                .orElseThrow(() -> new RuntimeException("Error de seguridad: Usuario no encontrado"));
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
 
         //  Obtenemos el ID real seguro
         Integer idPacienteReal = usuarioLogueado.getId();
@@ -52,8 +45,6 @@ public class CitaService {
 
         // Forzamos la identidad en la cita
         nuevaCita.setPaciente(pacienteReal);
-
-
 
         if (pacienteReal.getPenalizacionActiva() != null && pacienteReal.getPenalizacionActiva()) {
             throw new RuntimeException("Error: Tienes una penalización pendiente del 50% por cancelación tardía. Debes liquidar tu adeudo antes de agendar una nueva cita.");
@@ -89,13 +80,7 @@ public class CitaService {
     public Cita agendarCitaSeguimiento(Cita nuevaCita) {
 
         validarReglasDeHorario(nuevaCita.getFechaHora());
-        // Extraemos el correo directamente del Token
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String correoToken = auth.getName();
-
-        //  Buscamos al usuario dueño de ese token
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(correoToken)
-                .orElseThrow(() -> new RuntimeException("Error de seguridad: Usuario no encontrado"));
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
 
         // Obtenemos el ID real seguro
         Integer idPacienteReal = usuarioLogueado.getId();
@@ -142,6 +127,7 @@ public class CitaService {
     }
 
     public Cita cancelarCita(Integer idCita) {
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
@@ -150,13 +136,6 @@ public class CitaService {
         if (estadoActual.equals("cancelada") || estadoActual.equals("finalizada")
                 || estadoActual.equals("rechazada") || estadoActual.equals("no_asistio")) {
             throw new RuntimeException("Error: La cita ya no puede ser cancelada (Estado actual: " + estadoActual + ").");        }
-
-        //  Buscamos al usuario dueño de ese token
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String correoToken = auth.getName();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(correoToken)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
-
 
         // 4. LÓGICA DE PENALIZACIÓN (Solo aplica si es el paciente quien cancela)
         if (usuarioLogueado.getRol().equalsIgnoreCase("paciente")) {
@@ -194,13 +173,13 @@ public class CitaService {
     }
 
     public Cita aprobarCita(Integer idCita) {
+
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
+
         // Buscamos la cita por su ID
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
         // Solo se pueden aprobar citas que estén esperando aprobación
         if (!cita.getEstado().equals("pendiente")) {
@@ -218,6 +197,7 @@ public class CitaService {
     }
 
     public Cita rechazarCita(Integer idCita) {
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
@@ -226,31 +206,22 @@ public class CitaService {
             throw new RuntimeException("Error: Solo puedes rechazar citas que estén pendientes de aprobación.");
         }
 
-        // CANDADO DE SEGURIDAD: ¿Es su cita?
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
-
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: No puedes rechazar una cita asignada a otro psicólogo.");
         }
 
         cita.setEstado("rechazada");
-
         return citaRepository.save(cita);
     }
 
     public Cita finalizarCita(Integer idCita) {
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
         if (!cita.getEstado().equals("confirmada")) {
             throw new RuntimeException("Error: Solo puedes finalizar citas que estén en estado 'confirmada'.");
         }
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: No puedes finalizar la cita de otro psicólogo.");
@@ -261,6 +232,7 @@ public class CitaService {
     }
 
     public Cita registrarNoShow(Integer idCita) {
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
@@ -268,16 +240,19 @@ public class CitaService {
             throw new RuntimeException("Error: Solo puedes marcar como No-Show citas que estén 'confirmada'.");
         }
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
-
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: No puedes modificar la cita de otro psicólogo.");
         }
 
         cita.setEstado("no_asistio");
         return citaRepository.save(cita);
+    }
+
+    private Usuario obtenerUsuarioAutenticado() {
+        //  Extraemos el correo directamente del Token y buscamos al usuario dueño de ese token
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error de seguridad: Usuario no encontrado"));
     }
 
     private void validarReglasDeHorario(LocalDateTime fechaHora) {
