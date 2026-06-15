@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.util.List;
 
 
 @Service
@@ -130,64 +132,73 @@ public class CitaService {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
-
-        // Validamos que la cita sea cancelable
         String estadoActual = cita.getEstado();
+
+        if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error: cita no encontrada");
+        }
+
+        // REGLA 2: Bloquear cancelaciones si la hora ya pasó
+        if (LocalDateTime.now().isAfter(cita.getFechaHora())) {
+            throw new RuntimeException("Error: La cita ya pasó, no puede ser cancelada.");
+        }
+
         if (estadoActual.equals("cancelada") || estadoActual.equals("finalizada")
                 || estadoActual.equals("rechazada") || estadoActual.equals("no_asistio")) {
-            throw new RuntimeException("Error: La cita ya no puede ser cancelada (Estado actual: " + estadoActual + ").");        }
+            throw new RuntimeException("Error: La cita ya no puede ser cancelada.");
+        }
 
-        // 4. LÓGICA DE PENALIZACIÓN (Solo aplica si es el paciente quien cancela)
         if (usuarioLogueado.getRol().equalsIgnoreCase("paciente")) {
+            if (!cita.getPaciente().getId().equals(usuarioLogueado.getId())) throw new RuntimeException("Error de seguridad.");
 
-            // Verificamos por seguridad que el paciente esté cancelando SU propia cita
-            if (!cita.getPaciente().getId().equals(usuarioLogueado.getId())) {
-                throw new RuntimeException("Error: cita no encontrada");
-            }
             if (estadoActual.equals("confirmada")) {
                 long horasFaltantes = ChronoUnit.HOURS.between(LocalDateTime.now(), cita.getFechaHora());
-
                 if (horasFaltantes < 20) {
-                // Multa aplicada
-                Paciente paciente = cita.getPaciente();
-                paciente.setPenalizacionActiva(true);
-                pacienteRepository.save(paciente);
+                    Paciente paciente = cita.getPaciente();
+                    paciente.setPenalizacionActiva(true);
+                    pacienteRepository.save(paciente);
+                }
+            }
+        } else if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) throw new RuntimeException("Error de seguridad.");
+            if (estadoActual.equals("pendiente")) throw new RuntimeException("Utiliza el botón 'Rechazar' para solicitudes pendientes.");
+
+            // BARRERA DE DESHACER (24 hrs) para el psicólogo
+            if (estadoActual.equals("confirmada")) {
+                validarPeriodoDeGracia(cita);
             }
         }
-            cita.setEstado("cancelada");}
 
-
-            else if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
-
-            // Verificamos que el psicólogo no cancele la cita de otro doctor
-            if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
-                throw new RuntimeException("Error: cita no encontrada");
-            }
-            if (estadoActual.equals("pendiente")) {
-                throw new RuntimeException("Error: Para solicitudes pendientes, utiliza el botón 'Rechazar'.");
-            }
-            cita.setEstado("cancelada");
-        }
-
+        cita.setEstado("cancelada");
         return citaRepository.save(cita);
     }
 
     public Cita aprobarCita(Integer idCita) {
 
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
-
         // Buscamos la cita por su ID
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
-
-        // Solo se pueden aprobar citas que estén esperando aprobación
-        if (!cita.getEstado().equals("pendiente")) {
-            throw new RuntimeException("Error: Esta cita no está pendiente de aprobación (Estado actual: " + cita.getEstado() + ")");
-        }
+        String estadoActual = cita.getEstado();
 
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: Esta cita pertenece a otro psicólogo.");
+        }
+
+        // REGLA 1, 3 y 4: Solo se aprueba desde pendiente, o deshaciendo rechazada/cancelada
+        if (!estadoActual.equals("pendiente") && !estadoActual.equals("rechazada") && !estadoActual.equals("cancelada")) {
+            throw new RuntimeException("Error: No puedes confirmar una cita que está en estado '" + estadoActual + "'.");
+        }
+
+        // REGLA 1 y 3 (Cron Job): Si la hora de la cita ya pasó, es imposible confirmarla (Bloquea las rechazadas por el sistema)
+        if (LocalDateTime.now().isAfter(cita.getFechaHora())) {
+            throw new RuntimeException("Error: La fecha de esta cita ya pasó. No puede ser confirmada.");
+        }
+
+        // BARRERA DE DESHACER (24 hrs)
+        if (estadoActual.equals("rechazada") || estadoActual.equals("cancelada")) {
+            validarPeriodoDeGracia(cita);
         }
 
         // Cambiamos el estado oficialmente
@@ -201,13 +212,25 @@ public class CitaService {
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
-        // Solo se puede rechazar si estaba esperando aprobación
-        if (!cita.getEstado().equals("pendiente")) {
-            throw new RuntimeException("Error: Solo puedes rechazar citas que estén pendientes de aprobación.");
-        }
-
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: No puedes rechazar una cita asignada a otro psicólogo.");
+        }
+
+        String estadoActual = cita.getEstado();
+
+        // REGLA 1 y 2: Solo desde pendiente, o desde confirmada (si fue un error de dedo)
+        if (!estadoActual.equals("pendiente") && !estadoActual.equals("confirmada")) {
+            throw new RuntimeException("Error: No puedes rechazar una cita en estado '" + estadoActual + "'.");
+        }
+
+        // REGLA 2: No se puede rechazar si ya pasó la hora
+        if (LocalDateTime.now().isAfter(cita.getFechaHora())) {
+            throw new RuntimeException("Error: La hora de la cita ya pasó. Debe marcarse como finalizada o no-show.");
+        }
+
+        // BARRERA DE DESHACER (24 hrs)
+        if (estadoActual.equals("confirmada")) {
+            validarPeriodoDeGracia(cita);
         }
 
         cita.setEstado("rechazada");
@@ -218,9 +241,17 @@ public class CitaService {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
+        String estadoActual = cita.getEstado();
 
-        if (!cita.getEstado().equals("confirmada")) {
-            throw new RuntimeException("Error: Solo puedes finalizar citas que estén en estado 'confirmada'.");
+        // REGLA 2 y 5: Solo desde confirmada o deshaciendo no-show
+        if (!estadoActual.equals("confirmada") && !estadoActual.equals("no_asistio")) {
+            throw new RuntimeException("Error: No puedes finalizar una cita en estado '" + estadoActual + "'.");
+        }
+
+        validarSesionTerminada(cita);
+
+        if (estadoActual.equals("no_asistio")) {
+            validarPeriodoDeGracia(cita);
         }
 
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
@@ -236,12 +267,22 @@ public class CitaService {
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
 
-        if (!cita.getEstado().equals("confirmada")) {
-            throw new RuntimeException("Error: Solo puedes marcar como No-Show citas que estén 'confirmada'.");
-        }
-
         if (!cita.getPsicologo().getId().equals(usuarioLogueado.getId())) {
             throw new RuntimeException("Error de seguridad: No puedes modificar la cita de otro psicólogo.");
+        }
+
+        String estadoActual = cita.getEstado();
+
+        // REGLA 2 y 5: Solo desde confirmada o deshaciendo finalizada
+        if (!estadoActual.equals("confirmada") && !estadoActual.equals("finalizada")) {
+            throw new RuntimeException("Error: No puedes marcar como No-Show una cita en estado '" + estadoActual + "'.");
+        }
+
+        validarSesionTerminada(cita);
+
+        // BARRERA DE DESHACER (24 hrs)
+        if (estadoActual.equals("finalizada")) {
+            validarPeriodoDeGracia(cita);
         }
 
         cita.setEstado("no_asistio");
@@ -290,6 +331,40 @@ public class CitaService {
             if (hora == 14) {
                 throw new RuntimeException("Error: El horario de 14:00 a 15:00 está inhabilitado por hora de comida.");
             }
+        }
+    }
+
+    // Se ejecuta todos los días a la 1 de la mañana
+    @Scheduled(cron = "0 0 1 * * *")
+    public void limpiarCitasExpiradas() {
+        System.out.println("Iniciando tarea programada: Limpieza de citas expiradas...");
+
+        // Buscamos todas las citas en la base de datos
+        List<Cita> todasLasCitas = citaRepository.findAll();
+
+        for (Cita cita : todasLasCitas) {
+            // Si la cita está pendiente y ya pasó su fecha/hora
+            if (cita.getEstado().equals("pendiente") && LocalDateTime.now().isAfter(cita.getFechaHora())) {
+                cita.setEstado("rechazada"); // O puedes crear un estado "expirada"
+                citaRepository.save(cita);
+                System.out.println("Cita ID " + cita.getId() + " marcada como rechazada por expiración de tiempo.");
+            }
+        }
+    }
+
+    private void validarPeriodoDeGracia(Cita cita) {
+        if (cita.getFechaModificacion() != null) {
+            long horasTranscurridas = ChronoUnit.HOURS.between(cita.getFechaModificacion(), LocalDateTime.now());
+            if (horasTranscurridas > 24) {
+                throw new RuntimeException("Error: El periodo de gracia de 24 horas para deshacer este cambio de estado ha expirado.");
+            }
+        }
+    }
+
+    private void validarSesionTerminada(Cita cita) {
+        LocalDateTime finCita = cita.getFechaHora().plusMinutes(50);
+        if (LocalDateTime.now().isBefore(finCita)) {
+            throw new RuntimeException("Error: La sesión aún no termina. Debes esperar a que pase su horario (" + finCita.toLocalTime() + ").");
         }
     }
 }

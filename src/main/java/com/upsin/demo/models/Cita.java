@@ -33,4 +33,14 @@ public class Cita {
     // Para saber si es la primera cita (triaje)
     @Column(name = "es_primera", nullable = false)
     private Boolean esPrimera;
+
+    @Column(name = "fecha_modificacion")
+    private LocalDateTime fechaModificacion;
+
+    // actualizan la fecha antes de guardar en MySQL
+    @PrePersist
+    @PreUpdate
+    public void actualizarFechaModificacion() {
+        this.fechaModificacion = LocalDateTime.now();
+    }
 }
