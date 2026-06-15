@@ -13,19 +13,22 @@ public class HistorialClinico {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // A qué paciente pertenece este registro
-    @ManyToOne
-    @JoinColumn(name = "id_paciente", nullable = false)
+    // Relación 1 a 1: Un paciente tiene un solo historial, y un historial pertenece a un solo paciente.
+    @OneToOne
+    @JoinColumn(name = "id_paciente", nullable = false, unique = true)
     private Paciente paciente;
 
-    // Qué psicólogo escribió esta nota
-    @ManyToOne
-    @JoinColumn(name = "id_psicologo", nullable = false)
-    private Psicologo psicologo;
+    @Column(name = "antecedentes_familiares", columnDefinition = "TEXT")
+    private String antecedentesFamiliares;
 
-    @Column(name = "fecha_hora", nullable = false)
-    private LocalDateTime fechaHora;
+    @Column(name = "antecedentes_medicos", columnDefinition = "TEXT")
+    private String antecedentesMedicos;
 
-    @Column(name = "notas_sesion", columnDefinition = "TEXT", nullable = false)
-    private String notasSesion;
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
+
+    @PrePersist
+    public void asignarFechaCreacion() {
+        this.fechaCreacion = LocalDateTime.now();
+    }
 }
