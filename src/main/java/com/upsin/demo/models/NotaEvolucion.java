@@ -3,6 +3,7 @@ package com.upsin.demo.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -14,11 +15,13 @@ public class NotaEvolucion {
     private Integer id;
 
     // Vinculamos esta nota a la "carpeta" principal del paciente
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "id_historial", nullable = false)
     private HistorialClinico historialClinico;
 
     // Vinculamos esta nota a la cita específica donde ocurrió la sesión
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "id_cita", nullable = false, unique = true)
     private Cita cita;
