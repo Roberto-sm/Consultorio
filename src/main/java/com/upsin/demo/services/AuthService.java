@@ -1,8 +1,10 @@
 package com.upsin.demo.services;
 
+import com.upsin.demo.models.HistorialClinico;
 import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Psicologo;
 import com.upsin.demo.models.Usuario;
+import com.upsin.demo.repositories.HistorialClinicoRepository;
 import com.upsin.demo.repositories.PacienteRepository;
 import com.upsin.demo.repositories.PsicologoRepository;
 import com.upsin.demo.repositories.UsuarioRepository;
@@ -30,6 +32,9 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private HistorialClinicoRepository historialClinicoRepository;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     @Transactional
@@ -49,8 +54,12 @@ public class AuthService {
         Paciente nuevoPaciente = new Paciente();
         nuevoPaciente.setUsuario(usuarioGuardado);
 
-        //  Guardamos en la tabla 'pacientes'
-        pacienteRepository.save(nuevoPaciente);
+        Paciente pacienteGuardado = pacienteRepository.save(nuevoPaciente);
+
+        HistorialClinico historialVacio = new HistorialClinico();
+        historialVacio.setPaciente(pacienteGuardado);
+
+        historialClinicoRepository.save(historialVacio);
 
         return usuarioGuardado;
     }
