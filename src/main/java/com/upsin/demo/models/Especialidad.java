@@ -1,6 +1,6 @@
 package com.upsin.demo.models;
 
-import jakarta.persistence.*; // libreria para interactuar con BD´s en java JPA
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data //  genera getters, setters, toString y constructores automáticamente
@@ -12,7 +12,7 @@ public class Especialidad {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Equivale a AUTO_INCREMENT en MySQL
     private Integer id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true)
     private String nombre;
 
     @Column(columnDefinition = "TEXT")

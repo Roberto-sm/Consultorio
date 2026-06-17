@@ -33,11 +33,11 @@ public class Psicologo {
     private Boolean esDePlanta;
 
     // 2. Relación Muchos a Muchos con las Especialidades
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "psicologo_especialidad", // La tabla intermedia que creaste
             joinColumns = @JoinColumn(name = "id_psicologo"),
             inverseJoinColumns = @JoinColumn(name = "id_especialidad")
     )
-    private List<Especialidad> especialidades;
+    private java.util.Set<Especialidad> especialidades;
 }

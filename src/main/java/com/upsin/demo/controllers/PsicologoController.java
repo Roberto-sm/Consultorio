@@ -1,6 +1,7 @@
 package com.upsin.demo.controllers;
 
 import com.upsin.demo.models.Psicologo;
+import com.upsin.demo.services.PsicologoService;
 import com.upsin.demo.repositories.PsicologoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -9,8 +10,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.upsin.demo.models.Usuario;
 import com.upsin.demo.repositories.UsuarioRepository;
-
-
 import java.util.List;
 
 @RestController
@@ -19,6 +18,9 @@ public class PsicologoController {
 
     @Autowired
     private PsicologoRepository psicologoRepository;
+
+    @Autowired
+    private PsicologoService psicologoService;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -55,5 +57,10 @@ public class PsicologoController {
 
         // 4. Guardamos
         return psicologoRepository.save(psicologo);
+    }
+
+    @GetMapping("/buscar")
+    public List<Psicologo> buscarPorEspecialidad(@RequestParam String especialidad) {
+        return psicologoService.buscarPsicologosPorEspecialidad(especialidad);
     }
 }
