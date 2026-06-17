@@ -157,6 +157,9 @@ public class CitaService {
                     Paciente paciente = cita.getPaciente();
                     paciente.setPenalizacionActiva(true);
                     pacienteRepository.save(paciente);
+
+                    // DEJAMOS LA HUELLA DE AUDITORÍA EN LA CITA
+                    cita.setMultaAplicada(true);
                 }
             }
         } else if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {

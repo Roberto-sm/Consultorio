@@ -37,6 +37,9 @@ public class Cita {
     @Column(name = "fecha_modificacion")
     private LocalDateTime fechaModificacion;
 
+    @Column(name = "multa_aplicada", nullable = false)
+    private Boolean multaAplicada = false; // Por defecto es falso
+
     // actualizan la fecha antes de guardar en MySQL
     @PrePersist
     @PreUpdate

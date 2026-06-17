@@ -50,10 +50,17 @@ public class AuthService {
         //  Guardamos en la tabla 'usuarios, se le asigna el id del usuario a la variable usuarioGuardado
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
+        Psicologo psicologoPlanta = psicologoRepository.findFirstByEsDePlantaTrue()
+                .orElseThrow(() -> new RuntimeException("Error crítico: No hay un psicólogo de planta configurado en el sistema para recibir al paciente."));
+        
         //  Preparamos el registro para la tabla 'pacientes' usando ese mismo ID
         Paciente nuevoPaciente = new Paciente();
         nuevoPaciente.setUsuario(usuarioGuardado);
 
+        // Asignamos este psicólogo al paciente nuevo
+        nuevoPaciente.setPsicologo(psicologoPlanta);
+
+        // Guardamos en la tabla 'pacientes'
         Paciente pacienteGuardado = pacienteRepository.save(nuevoPaciente);
 
         HistorialClinico historialVacio = new HistorialClinico();
