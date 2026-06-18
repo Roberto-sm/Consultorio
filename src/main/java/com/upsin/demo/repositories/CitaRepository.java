@@ -11,12 +11,13 @@ import java.util.Optional;
 @Repository
 public interface CitaRepository extends JpaRepository<Cita, Integer> {
 
-    // Spring Boot lee el nombre de este método y genera automáticamente
-    // un "SELECT * FROM citas WHERE id_psicologo = ?"
     List<Cita> findByPsicologoId(Integer psicologoId);
-    Optional<Cita> findFirstByPacienteIdAndEstado(Integer pacienteId, String estado);// Busca la cita activa de un paciente específico
 
-    boolean existsByPacienteIdAndEstado(Integer pacienteId, String estado); // busca si el paciente tiene una cita pendiente
+    Optional<Cita> findFirstByPacienteIdAndEstado(Integer pacienteId, String estado);
 
+    /** Regla de concurrencia: Verifica si un paciente ya tiene una cita activa en espera. */
+    boolean existsByPacienteIdAndEstado(Integer pacienteId, String estado);
+
+    /** Regla de empalme: Evita que el calendario del psicólogo sufra colisiones (Double Booking). */
     boolean existsByPsicologoIdAndFechaHoraAndEstado(Integer psicologoId, LocalDateTime fechaHora, String estado);
 }
