@@ -7,6 +7,8 @@ import com.upsin.demo.dto.AuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -16,13 +18,13 @@ public class AuthController {
 
     // endpoint para pacientes
     @PostMapping("/registro")
-    public Usuario registrarPaciente(@RequestBody Usuario usuario) {
+    public Usuario registrarPaciente(@Valid @RequestBody Usuario usuario) {
         return authService.registrarPaciente(usuario);
     }
 
     // endpoint para psicologos
     @PostMapping("/registro/psicologo")
-    public Usuario registrarPsicologo(@RequestBody Usuario usuario) {
+    public Usuario registrarPsicologo(@Valid @RequestBody Usuario usuario) {
         return authService.registrarPsicologo(usuario);
     }
 
