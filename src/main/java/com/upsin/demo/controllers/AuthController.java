@@ -6,10 +6,11 @@ import com.upsin.demo.dto.LoginRequest;
 import com.upsin.demo.dto.AuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
 
-@RestController
+@Tag(name = "1. Autenticación y Seguridad", description = "Endpoints para el registro de pacientes, psicólogos y generación de tokens JWT.")
 @RequestMapping("/api/auth")
 public class AuthController {
 

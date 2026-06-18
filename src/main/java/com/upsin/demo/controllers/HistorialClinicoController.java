@@ -5,7 +5,10 @@ import com.upsin.demo.services.HistorialClinicoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 
+@Tag(name = "3. Expediente Clínico", description = "Manejo de antecedentes y notas de evolución.")
 @RestController
 @RequestMapping("/api/historial")
 public class HistorialClinicoController {

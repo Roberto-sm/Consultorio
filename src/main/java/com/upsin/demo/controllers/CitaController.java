@@ -6,9 +6,12 @@ import com.upsin.demo.services.CitaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 
+@Tag(name = "2. Gestión de Citas", description = "Máquina de estados para agendar, confirmar, cancelar (con penalizaciones) y finalizar sesiones.")
 @RestController
 @RequestMapping("/api/citas")
 public class CitaController {
@@ -52,6 +55,10 @@ public class CitaController {
         return citaService.rechazarCita(id);
     }
 
+    @Operation(
+            summary = "Cancelar una cita agendada",
+            description = "Permite a un paciente o psicólogo cancelar una cita. Si el paciente cancela con menos de 24 horas de anticipación, el sistema aplica una penalización automática y guarda una huella de auditoría."
+    )
     @PreAuthorize("hasAnyRole('PACIENTE', 'PSICOLOGO')")
     @PutMapping("/{id}/cancelar")
     public Cita cancelarCita(@PathVariable Integer id) {

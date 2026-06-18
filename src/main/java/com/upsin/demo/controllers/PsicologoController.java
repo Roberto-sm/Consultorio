@@ -4,6 +4,7 @@ import com.upsin.demo.models.Psicologo;
 import com.upsin.demo.dto.PsicologoDTO;
 import com.upsin.demo.services.PsicologoService;
 import com.upsin.demo.repositories.PsicologoRepository;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
@@ -64,6 +65,10 @@ public class PsicologoController {
         return psicologoRepository.save(psicologo);
     }
 
+    @Operation(
+            summary = "Buscador de Especialistas (Paginado)",
+            description = "Búsqueda relacional ignorando mayúsculas. Devuelve DTOs paginados para no saturar la memoria del cliente."
+    )
     @GetMapping("/buscar")
     public Page<PsicologoDTO> buscarPorEspecialidad(
             @RequestParam(required = false, defaultValue = "") String especialidad,
