@@ -9,41 +9,46 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Importante
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Núcleo de configuración de Spring Security.
+ * Define la cadena de filtros (FilterChain), deshabilita la protección de sesiones (Stateless)
+ * y establece las reglas de ruteo público vs privado.
+ */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
-    private JwtFilter jwtFilter; // Filtro para autenticar el header
+    private JwtFilter jwtFilter;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {  // herramienta que encriptará las contraseñas
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Apagamos el bloqueo automático para poder seguir haciendo pruebas
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Desactivamos protección de formularios (usamos REST)
+                .csrf(csrf -> csrf.disable()) // Arquitectura REST Stateless
                 .authorizeHttpRequests(auth -> auth
-
-                        .requestMatchers("/api/auth/**",
-                                "/api/psicologos/buscar",
+                        // Bloque de rutas públicas (Autenticación, Buscador y Documentación Swagger)
+                        .requestMatchers(
+                                "/api/auth/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/error").permitAll()
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/psicologos/buscar").permitAll()
 
-                                .requestMatchers("/error").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/psicologos/buscar").permitAll()
+                        // Bloque de rutas privadas
                         .anyRequest().authenticated()
-                        // CUALQUIER OTRA RUTA exigirá un token válido
                 )
-                // Colocamos nuestro filtro de JWT antes del filtro de seguridad estándar
+                // Inyectamos nuestro filtro personalizado antes del filtro de Spring
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }

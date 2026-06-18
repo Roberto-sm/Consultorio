@@ -9,6 +9,11 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuración de la interfaz interactiva Swagger UI / OpenAPI 3.0.
+ * Inyecta los metadatos del proyecto y habilita el esquema de seguridad global
+ * basado en Bearer Tokens (JWT) para probar endpoints protegidos desde el navegador.
+ */
 @Configuration
 public class OpenApiConfig {
 

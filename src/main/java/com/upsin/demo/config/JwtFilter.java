@@ -11,11 +11,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import java.util.Collections;
 import java.util.List;
 import java.io.IOException;
-import java.util.ArrayList;
 
+/**
+ * Interceptor de seguridad HTTP (Stateless).
+ * Se ejecuta una vez por cada petición HTTP entrante. Su responsabilidad es buscar,
+ * extraer y validar el token JWT del encabezado 'Authorization' para inyectar el
+ * contexto de seguridad de Spring Security antes de llegar a los controladores.
+ */
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -29,11 +35,11 @@ public class JwtFilter extends OncePerRequestFilter {
         // Extraemos el header "Authorization" de la petición
         String authHeader = request.getHeader("Authorization");
 
-        // Verificamos que exista y que empiece con "Bearer"
+        // Verificamos que exista y que cumpla con el estándar Bearer
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // Quitamos la palabra "Bearer"
+            String token = authHeader.substring(7);
 
-            // Si el token es válido, identificamos al usuario y le damos acceso
+            // Si la validación criptográfica es exitosa, autorizamos la petición
             if (jwtUtil.validarToken(token)) {
                 String correo = jwtUtil.extraerCorreo(token);
                 String rol = jwtUtil.extraerRol(token);
@@ -47,7 +53,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
-        // Continua el flujo normal de la petición
+        // Continua la cadena de filtros de Spring Security
         filterChain.doFilter(request, response);
     }
 }
