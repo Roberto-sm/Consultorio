@@ -16,6 +16,11 @@ import com.upsin.demo.dto.LoginRequest;
 import com.upsin.demo.dto.AuthResponse;
 import com.upsin.demo.config.JwtUtil;
 
+/**
+ * Servicio de Autenticación y Registro.
+ * Encapsula la lógica de negocio para la creación segura de cuentas, encriptación
+ * de contraseñas mediante BCrypt, y generación de tokens JWT.
+ */
 @Service
 public class AuthService {
 
@@ -37,30 +42,28 @@ public class AuthService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    /**
+     * Registra un nuevo paciente en el sistema.
+     * Es una operación transaccional: crea el usuario, encripta su contraseña,
+     * le asigna automáticamente un psicólogo de planta y le genera un expediente clínico vacío.
+     * * @param nuevoUsuario Entidad Usuario con los datos extraídos del RequestBody.
+     * @return El Usuario guardado en la base de datos.
+     * @throws RuntimeException Si no existe un psicólogo de planta configurado en el sistema.
+     */
     @Transactional
     public Usuario registrarPaciente(Usuario nuevoUsuario) {
-
-        //  Forzamos el rol para evitar inyecciones de datos incorrectos
         nuevoUsuario.setRol("paciente");
+        nuevoUsuario.setContraseña(passwordEncoder.encode(nuevoUsuario.getContraseña()));
 
-        // Encriptacion de contraseñas
-        String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
-        nuevoUsuario.setContraseña(hash);
-
-        //  Guardamos en la tabla 'usuarios, se le asigna el id del usuario a la variable usuarioGuardado
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
         Psicologo psicologoPlanta = psicologoRepository.findFirstByEsDePlantaTrue()
                 .orElseThrow(() -> new RuntimeException("Error crítico: No hay un psicólogo de planta configurado en el sistema para recibir al paciente."));
 
-        //  Preparamos el registro para la tabla 'pacientes' usando ese mismo ID
         Paciente nuevoPaciente = new Paciente();
         nuevoPaciente.setUsuario(usuarioGuardado);
-
-        // Asignamos este psicólogo al paciente nuevo
         nuevoPaciente.setPsicologo(psicologoPlanta);
 
-        // Guardamos en la tabla 'pacientes'
         Paciente pacienteGuardado = pacienteRepository.save(nuevoPaciente);
 
         HistorialClinico historialVacio = new HistorialClinico();
@@ -71,57 +74,52 @@ public class AuthService {
         return usuarioGuardado;
     }
 
+    /**
+     * Registra un nuevo profesional de la salud en el sistema.
+     * Crea su perfil base de usuario y su entrada correspondiente en la tabla de psicólogos.
+     * * @param nuevoUsuario Entidad Usuario con los datos de registro.
+     * @return El Usuario guardado.
+     */
     @Transactional
     public Usuario registrarPsicologo(Usuario nuevoUsuario) {
-
-        // Forzamos el rol
         nuevoUsuario.setRol("psicologo");
+        nuevoUsuario.setContraseña(passwordEncoder.encode(nuevoUsuario.getContraseña()));
 
-        // Encriptacion de contraseñas
-        String hash = passwordEncoder.encode(nuevoUsuario.getContraseña());
-        nuevoUsuario.setContraseña(hash);
-
-        // Guardamos en la tabla 'usuarios'
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
-        //  Creamos el perfil vacío en la tabla 'psicologos'
         Psicologo nuevoPsicologo = new Psicologo();
         nuevoPsicologo.setUsuario(usuarioGuardado);
-
-        // Por defecto, un psicólogo nuevo no es de planta. Esto solo lo debería cambiar un administrador después
         nuevoPsicologo.setEsDePlanta(false);
 
-        //  Guardamos en la tabla 'psicologos'
         psicologoRepository.save(nuevoPsicologo);
 
         return usuarioGuardado;
     }
 
+    /**
+     * Valida las credenciales de un usuario y genera un token de acceso.
+     * * @param request Objeto DTO que contiene correo y contraseña en texto plano.
+     * @return Objeto AuthResponse con el Token JWT generado y los datos de la sesión.
+     * @throws RuntimeException Si el correo no existe o la contraseña no coincide.
+     */
     public AuthResponse login(LoginRequest request) {
-
-        // Busca al usuario por correo
         Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
                 .orElseThrow(() -> new RuntimeException("Error: Correo no encontrado"));
 
-        // matches(contraseña_plana_de_postman, contraseña_hasheada_de_mysql)
         boolean esValida = passwordEncoder.matches(request.getContraseña(), usuario.getContraseña());
 
         if (!esValida) {
             throw new RuntimeException("Error: Contraseña incorrecta");
         }
 
-        // mensaje de exito
         AuthResponse response = new AuthResponse();
         response.setMensaje("Login exitoso");
         response.setRol(usuario.getRol());
         response.setIdUsuario(usuario.getId());
 
-        // Por ahora simularemos un token. El siguiente paso será generar un JWT real.
         String tokenReal = jwtUtil.generarToken(usuario.getCorreo(), usuario.getRol());
         response.setToken(tokenReal);
 
         return response;
     }
-
 }
-

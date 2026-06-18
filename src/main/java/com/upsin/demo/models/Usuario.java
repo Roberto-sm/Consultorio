@@ -1,11 +1,17 @@
 package com.upsin.demo.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.time.LocalDate;
 
+/**
+ * Entidad base que representa a todos los usuarios del sistema.
+ * Utiliza validaciones de Spring Boot Starter Validation para blindar la base de datos
+ * contra registros nulos o mal formados.
+ */
 @Data
 @Entity
 @Table(name = "usuarios")
@@ -20,15 +26,17 @@ public class Usuario {
     private String nombre;
 
     @NotBlank(message = "El correo es obligatorio")
+    @Email(message = "Debe tener un formato válido de correo electrónico")
     @Column(nullable = false, unique = true)
     private String correo;
 
     @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 8 caracteres por seguridad")
+    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres por seguridad")
     @Column(nullable = false)
     private String contraseña;
 
-    private String rol; // paciente, psicologo, admin
+    /** Rol de autorización en el sistema (ej. paciente, psicologo, admin). Asignado internamente por el sistema. */
+    private String rol;
 
     private String sexo;
 
