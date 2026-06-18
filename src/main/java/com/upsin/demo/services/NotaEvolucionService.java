@@ -15,6 +15,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Capa de negocio para las Notas de Evolución.
+ * Conecta las observaciones del psicólogo con el historial del paciente y asegura
+ * que se respeten las jerarquías clínicas y la máquina de estados de las citas.
+ */
 @Service
 public class NotaEvolucionService {
 
@@ -30,6 +35,11 @@ public class NotaEvolucionService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    /**
+     * Procesa y guarda una nueva hoja de evolución.
+     * Aplica la regla de negocio crítica: Una nota solo puede redactarse por el psicólogo
+     * tratante, y únicamente si la cita origen se encuentra en estado 'finalizada'.
+     */
     public NotaEvolucion crearNota(Integer idCita, NotaEvolucion nuevaNota) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
@@ -39,7 +49,6 @@ public class NotaEvolucionService {
             throw new RuntimeException("Error de seguridad: Solo los psicólogos pueden redactar notas.");
         }
 
-        //  Validamos la Cita
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada."));
 
@@ -55,7 +64,6 @@ public class NotaEvolucionService {
             throw new RuntimeException("Error: Ya existe una nota de evolución redactada para esta cita.");
         }
 
-        //  Vinculamos la nota con la "Carpeta" del paciente
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(cita.getPaciente().getId())
                 .orElseThrow(() -> new RuntimeException("Error crítico: El paciente no tiene un historial base creado."));
 
@@ -65,7 +73,6 @@ public class NotaEvolucionService {
         return notaEvolucionRepository.save(nuevaNota);
     }
 
-    // Método para consultar todas las notas de un paciente
     public List<NotaEvolucion> consultarNotasDePaciente(Integer idPaciente) {
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico."));

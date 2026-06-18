@@ -6,21 +6,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 
-@RestController // Le dice a Spring que esta clase devolverá respuestas en formato JSON
-@RequestMapping("/api/especialidades") // Define la URL principal para este controlador
+@Tag(name = "5. Catálogo de Especialidades", description = "Endpoints de solo lectura para listar las áreas de atención de la clínica.")
+@RestController
+@RequestMapping("/api/especialidades")
 public class EspecialidadController {
 
-    @Autowired // Inyecta automáticamente el repositorio que creamos en el Paso 1
+    @Autowired
     private EspecialidadRepository especialidadRepository;
 
-    // Endpoint para obtener TODAS las especialidades
+    @Operation(summary = "Obtener todas las especialidades", description = "Devuelve el catálogo completo de especialidades dadas de alta en el sistema. Endpoint público de consulta.")
     @GetMapping
     public List<Especialidad> obtenerTodas() {
-        // Esto equivale a hacer la consulta a MySQL, empaquetar los resultados
-        // en una lista de objetos Java y convertirlos a JSON. Todo en una línea.
         return especialidadRepository.findAll();
     }
 }

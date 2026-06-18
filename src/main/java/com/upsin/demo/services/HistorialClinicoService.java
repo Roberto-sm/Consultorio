@@ -9,6 +9,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Servicio encargado de la manipulación del expediente médico base.
+ * Controla que únicamente el personal clínico autorizado pueda sobreescribir antecedentes.
+ */
 @Service
 public class HistorialClinicoService {
 
@@ -18,9 +22,12 @@ public class HistorialClinicoService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    /**
+     * Actualiza los antecedentes médicos y familiares del paciente.
+     * Valida mediante el contexto de Spring Security que la petición provenga de un psicólogo.
+     */
     public HistorialClinico actualizarAntecedentes(Integer idPaciente, HistorialClinico datosNuevos) {
 
-        // 1. Validamos quién está intentando hacer el cambio
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
@@ -29,19 +36,18 @@ public class HistorialClinicoService {
             throw new RuntimeException("Error de seguridad: Solo el personal de psicología puede actualizar el historial clínico.");
         }
 
-        // 2. Buscamos la "carpeta" del paciente usando el método que creamos en el repositorio
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico registrado."));
 
-        // 3. Actualizamos únicamente los campos médicos (protegiendo el id y la fecha de creación)
         historial.setAntecedentesMedicos(datosNuevos.getAntecedentesMedicos());
         historial.setAntecedentesFamiliares(datosNuevos.getAntecedentesFamiliares());
 
-        // 4. Guardamos los cambios
         return historialClinicoRepository.save(historial);
     }
 
-    // Método para ver la "carpeta" base del paciente
+    /**
+     * Recupera el contenedor base del expediente.
+     */
     public HistorialClinico obtenerPorPaciente(Integer idPaciente) {
         return historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico registrado."));

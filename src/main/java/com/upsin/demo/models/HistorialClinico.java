@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * Entidad que actúa como la "Carpeta" o contenedor principal del expediente médico.
+ * Mantiene una relación estricta 1 a 1 con el Paciente y almacena el triaje base
+ * (antecedentes fijos).
+ */
 @Data
 @Entity
 @Table(name = "historial_clinico")
@@ -13,7 +18,6 @@ public class HistorialClinico {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // Relación 1 a 1: Un paciente tiene un solo historial, y un historial pertenece a un solo paciente.
     @OneToOne
     @JoinColumn(name = "id_paciente", nullable = false, unique = true)
     private Paciente paciente;

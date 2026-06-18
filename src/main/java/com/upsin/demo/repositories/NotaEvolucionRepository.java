@@ -10,9 +10,11 @@ import java.util.Optional;
 @Repository
 public interface NotaEvolucionRepository extends JpaRepository<NotaEvolucion, Integer> {
 
-    // Trae todas las hojas de un expediente, ordenadas de la más nueva a la más vieja
+    /** * Extrae todas las hojas de evolución de un paciente ordenadas cronológicamente
+     * de la más reciente a la más antigua (Técnica LIFO de lectura de expedientes).
+     */
     List<NotaEvolucion> findByHistorialClinicoIdOrderByFechaRegistroDesc(Integer idHistorial);
 
-    // Para evitar que un psicólogo escriba dos notas para la misma sesión
+    /** Restricción de negocio: Asegura que no se redacte más de una nota por sesión. */
     boolean existsByCitaId(Integer idCita);
 }

@@ -5,6 +5,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+/**
+ * Entidad que representa una "Hoja de Evolución" clínica.
+ * Almacena las observaciones y diagnósticos de una sesión específica.
+ */
 @Data
 @Entity
 @Table(name = "notas_evolucion")
@@ -14,13 +18,15 @@ public class NotaEvolucion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // Vinculamos esta nota a la "carpeta" principal del paciente
+    /** * Relación con la carpeta principal.
+     * @JsonIgnore previene el ciclo infinito de serialización al convertir a JSON.
+     */
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "id_historial", nullable = false)
     private HistorialClinico historialClinico;
 
-    // Vinculamos esta nota a la cita específica donde ocurrió la sesión
+    /** Relación 1 a 1 estricta con la sesión (Cita) que originó esta nota. */
     @JsonIgnore
     @OneToOne
     @JoinColumn(name = "id_cita", nullable = false, unique = true)

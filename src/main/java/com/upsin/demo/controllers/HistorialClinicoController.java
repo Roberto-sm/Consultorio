@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
-@Tag(name = "3. Expediente Clínico", description = "Manejo de antecedentes y notas de evolución.")
+@Tag(name = "3. Expediente Clínico", description = "Manejo de antecedentes generales y estructura base del paciente.")
 @RestController
 @RequestMapping("/api/historial")
 public class HistorialClinicoController {
@@ -16,14 +16,14 @@ public class HistorialClinicoController {
     @Autowired
     private HistorialClinicoService historialClinicoService;
 
-    // EL EQUIVALENTE A TU ANTIGUO GET (Pero ahora devuelve un solo objeto, no una lista)
+    @Operation(summary = "Consultar el historial base de un paciente", description = "Devuelve la entidad principal del expediente (antecedentes fijos). Requiere rol PSICOLOGO.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @GetMapping("/paciente/{pacienteId}")
     public HistorialClinico verHistorialBase(@PathVariable Integer pacienteId) {
         return historialClinicoService.obtenerPorPaciente(pacienteId);
     }
 
-    // EL NUEVO ENDPOINT PARA LLENAR LOS DATOS (El Triaje)
+    @Operation(summary = "Actualizar triaje y antecedentes", description = "Modifica los campos de antecedentes médicos y familiares. Protege la inmutabilidad de la fecha de creación original.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/paciente/{pacienteId}")
     public HistorialClinico actualizarAntecedentes(

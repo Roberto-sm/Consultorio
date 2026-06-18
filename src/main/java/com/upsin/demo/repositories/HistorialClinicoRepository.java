@@ -9,6 +9,8 @@ import java.util.Optional;
 @Repository
 public interface HistorialClinicoRepository extends JpaRepository<HistorialClinico, Integer> {
 
-    // Este método nos servirá más adelante para que el psicólogo busque el historial
+    /**
+     * Localiza la carpeta principal del expediente utilizando la llave foránea del paciente.
+     */
     Optional<HistorialClinico> findByPacienteId(Integer pacienteId);
 }
