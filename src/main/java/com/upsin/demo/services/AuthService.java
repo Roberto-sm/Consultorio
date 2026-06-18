@@ -52,7 +52,7 @@ public class AuthService {
 
         Psicologo psicologoPlanta = psicologoRepository.findFirstByEsDePlantaTrue()
                 .orElseThrow(() -> new RuntimeException("Error crítico: No hay un psicólogo de planta configurado en el sistema para recibir al paciente."));
-        
+
         //  Preparamos el registro para la tabla 'pacientes' usando ese mismo ID
         Paciente nuevoPaciente = new Paciente();
         nuevoPaciente.setUsuario(usuarioGuardado);
