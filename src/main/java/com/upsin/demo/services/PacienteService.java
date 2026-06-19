@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Lógica de negocio para la gestión administrativa de los pacientes.
+ */
 @Service
 public class PacienteService {
 
@@ -24,22 +27,27 @@ public class PacienteService {
     @Autowired
     private CitaRepository citaRepository;
 
+    /**
+     * Operación transaccional para la transferencia de casos clínicos (Derivación).
+     * Asegura que el paciente pase de la etapa de triaje al especialista adecuado.
+     * * @param idPaciente Identificador del paciente a transferir.
+     * @param idNuevoPsicologo Identificador del nuevo especialista.
+     * @return El registro del paciente actualizado en la base de datos.
+     */
     @Transactional
     public Paciente derivarPaciente(Integer idPaciente, Integer idNuevoPsicologo) {
 
-        //  Buscamos al paciente
         Paciente paciente = pacienteRepository.findById(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: Paciente no encontrado"));
 
-        // Buscamos al psicólogo especialista al que será transferido
         Psicologo nuevoPsicologo = psicologoRepository.findById(idNuevoPsicologo)
                 .orElseThrow(() -> new RuntimeException("Error: Psicólogo no encontrado"));
 
-        // Validamos que no lo estén derivando a otro psicólogo de planta
         if (nuevoPsicologo.getEsDePlanta() != null && nuevoPsicologo.getEsDePlanta()) {
             throw new RuntimeException("Error: No puedes derivar a un paciente a otro psicólogo de triaje");
         }
 
+        // Regla de negocio: Si existe una cita de triaje pendiente, la finaliza automáticamente
         Optional<Cita> citaPendiente = citaRepository.findFirstByPacienteIdAndEstado(idPaciente, "pendiente");
 
         if (citaPendiente.isPresent()) {
@@ -48,10 +56,7 @@ public class PacienteService {
             citaRepository.save(cita);
         }
 
-        //  Hacemos la transferencia oficial
         paciente.setPsicologo(nuevoPsicologo);
-
-        //  Guardamos los cambios en MySQL
         return pacienteRepository.save(paciente);
     }
 }

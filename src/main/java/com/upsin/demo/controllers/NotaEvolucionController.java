@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 
-@Tag(name = "4. Notas de Evolución", description = "Endpoints para la captura y lectura cronológica de las observaciones de cada sesión terapéutica.")
+@Tag(name = "5. Notas de Evolución", description = "Endpoints para la captura y lectura cronológica de las observaciones de cada sesión terapéutica.")
 @RestController
 @RequestMapping("/api/notas")
 public class NotaEvolucionController {

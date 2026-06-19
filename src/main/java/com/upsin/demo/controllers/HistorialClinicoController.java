@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
-@Tag(name = "3. Expediente Clínico", description = "Manejo de antecedentes generales y estructura base del paciente.")
+@Tag(name = "7. Expediente Clínico", description = "Manejo de antecedentes generales y estructura base del paciente.")
 @RestController
 @RequestMapping("/api/historial")
 public class HistorialClinicoController {

@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 
+/**
+ * Entidad que modela el perfil profesional del personal médico.
+ * Implementa relaciones complejas en JPA, incluyendo un JoinTable para mapear
+ * las especialidades de forma eficiente.
+ */
 @Data
 @Entity
 @Table(name = "psicologos")
@@ -12,7 +17,6 @@ public class Psicologo {
     @Id
     private Integer id;
 
-    // 1. Relación 1 a 1 con la tabla Usuarios compartiendo el mismo ID
     @OneToOne
     @MapsId
     @JoinColumn(name = "id")
@@ -32,10 +36,10 @@ public class Psicologo {
     @Column(name = "es_de_planta")
     private Boolean esDePlanta;
 
-    // 2. Relación Muchos a Muchos con las Especialidades
+    /** Relación Muchos a Muchos gestionada a través de la tabla pivote 'psicologo_especialidad'. */
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "psicologo_especialidad", // La tabla intermedia que creaste
+            name = "psicologo_especialidad",
             joinColumns = @JoinColumn(name = "id_psicologo"),
             inverseJoinColumns = @JoinColumn(name = "id_especialidad")
     )

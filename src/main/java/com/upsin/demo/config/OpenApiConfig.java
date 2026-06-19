@@ -25,11 +25,10 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("API REST - Gestión de Consultorio Psicológico")
                         .version("1.0")
-                        .description("Arquitectura Backend para la administración de citas, roles de usuario, expedientes clínicos y motor de búsqueda de especialistas.")
-                        .contact(new Contact()
-                                .name("Jesús Roberto Sandoval Martínez")
-                                .email("robertosm14@outlook.com")
-                                .url("https://github.com/Roberto-sm/Consultorio")))
+                        .description("Arquitectura Backend para la administración de citas, roles de usuario, expedientes clínicos y motor de búsqueda de especialistas.\n\n" +
+                                " **Desarrollador:** Jesús Roberto Sandoval Martínez\n\n" +
+                                " **Correo:** [robertosm14@outlook.com](mailto:robertosm14@outlook.com)\n\n" +
+                                " **GitHub:** [Repositorio del Proyecto](https://github.com/Roberto-sm/Consultorio)"))
                 .addSecurityItem(new SecurityRequirement().addList(nombreSeguridad))
                 .components(new Components()
                         .addSecuritySchemes(nombreSeguridad, new SecurityScheme()

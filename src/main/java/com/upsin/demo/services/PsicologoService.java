@@ -8,38 +8,44 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
 import java.util.stream.Collectors;
 
+/**
+ * Servicio enfocado en la capa de presentación segura y escalabilidad.
+ * Transforma entidades pesadas de base de datos en DTOs ligeros para la capa HTTP.
+ */
 @Service
 public class PsicologoService {
 
     @Autowired
     private PsicologoRepository psicologoRepository;
 
+    /**
+     * Orquesta la búsqueda paginada de doctores por especialidad.
+     */
     public Page<PsicologoDTO> buscarPsicologosPorEspecialidad(String nombreEspecialidad, Pageable pageable) {
 
-        // 1. Declaramos la variable temporal estricta para recibir el MODELO de la BD
         Page<Psicologo> paginaPsicologos;
 
-        // 2. Ejecutamos la búsqueda en MySQL
         if (nombreEspecialidad == null || nombreEspecialidad.trim().isEmpty()) {
             paginaPsicologos = psicologoRepository.findAll(pageable);
         } else {
             paginaPsicologos = psicologoRepository.findByEspecialidadesNombreContainingIgnoreCase(nombreEspecialidad, pageable);
         }
 
-        // 3. TRANSFORMACIÓN: .map() toma el Page<Psicologo> y lo convierte a Page<PsicologoDTO>
+        // Utiliza una referencia a método de Java para proyectar la transformación de los datos
         return paginaPsicologos.map(this::convertirADto);
     }
 
+    /**
+     * Helper Method: Transforma un objeto Psicologo en un PsicologoDTO.
+     * Oculta datos sensibles y aplana las colecciones utilizando Streams funcionales.
+     */
     private PsicologoDTO convertirADto(Psicologo psicologo) {
         PsicologoDTO dto = new PsicologoDTO();
         dto.setIdPsicologo(psicologo.getId());
 
-        // Extraemos los datos del usuario vinculado
         if (psicologo.getUsuario() != null) {
             dto.setNombre(psicologo.getUsuario().getNombre());
             dto.setCorreo(psicologo.getUsuario().getCorreo());
@@ -47,7 +53,6 @@ public class PsicologoService {
 
         dto.setEsDePlanta(psicologo.getEsDePlanta());
 
-        // Extraemos solo los nombres de las especialidades usando programación funcional (Streams)
         if (psicologo.getEspecialidades() != null) {
             dto.setEspecialidades(psicologo.getEspecialidades().stream()
                     .map(Especialidad::getNombre)
