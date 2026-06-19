@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 
-@Tag(name = "4. Catálogo de Especialidades", description = "Endpoints de solo lectura para listar las áreas de atención de la clínica.")
+@Tag(name = "1. Catálogo de Especialidades", description = "Endpoints de solo lectura para listar las áreas de atención de la clínica.")
 @RestController
 @RequestMapping("/api/especialidades")
 public class EspecialidadController {

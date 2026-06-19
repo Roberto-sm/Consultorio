@@ -18,7 +18,7 @@ import com.upsin.demo.models.Usuario;
 import com.upsin.demo.repositories.UsuarioRepository;
 import java.util.List;
 
-@Tag(name = "7. Directorio Médico", description = "Buscador de especialistas, paginación, y gestión de perfiles profesionales.")
+@Tag(name = "3. Directorio Médico", description = "Buscador de especialistas, paginación, y gestión de perfiles profesionales.")
 @RestController
 @RequestMapping("/api/psicologos")
 public class PsicologoController {
@@ -38,7 +38,7 @@ public class PsicologoController {
         return psicologoRepository.findAll();
     }
 
-    @Operation(summary = "Actualizar mi perfil", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso.")
+    @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/perfil")
     public Psicologo actualizarPerfil(@RequestBody Psicologo datosActualizados) {
@@ -63,7 +63,7 @@ public class PsicologoController {
         return psicologoRepository.save(psicologo);
     }
 
-    @Operation(summary = "Buscador de Especialistas (Paginado / DTO)", description = "Búsqueda relacional ignorando mayúsculas. Expone los datos a través de un DTO (Data Transfer Object) para asegurar la información y utiliza paginación para optimizar la carga del servidor.")
+    @Operation(summary = "Buscador de Especialidad (Paginado / DTO), busca una especialidad/tratamiento y regresa a los psicologos existentes para tratarlo", description = "Búsqueda relacional ignorando mayúsculas. Expone los datos a través de un DTO y utiliza paginación para optimizar la carga del servidor.")
     @GetMapping("/buscar")
     public Page<PsicologoDTO> buscarPorEspecialidad(
             @RequestParam(required = false, defaultValue = "") String especialidad,

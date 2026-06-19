@@ -6,12 +6,15 @@ import com.upsin.demo.services.CitaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 
-@Tag(name = "2. Gestión de Citas", description = "Máquina de estados para la agenda de la clínica. Controla validaciones de horario, empalmes, confirmaciones y aplicación de multas financieras.")
+@Tag(name = "4. Gestión de Citas", description = "Máquina de estados para la agenda de la clínica. Controla validaciones de horario, empalmes, confirmaciones y aplicación de multas financieras.")
 @RestController
 @RequestMapping("/api/citas")
 public class CitaController {
@@ -22,17 +25,13 @@ public class CitaController {
     @Autowired
     private CitaService citaService;
 
-    @Operation(summary = "Consultar todas las citas", description = "Genera un volcado completo de la agenda histórica del sistema. Ideal para tableros de administración.")
-    @GetMapping
+    @Operation(summary = "Consultar todas las citas Nota: Esta peticion es exclusiva del rol Admin que actualmente no existe", description = "Genera un volcado completo de la agenda histórica del sistema. Ideal para tableros de administración.")
+    @PreAuthorize("hasRole('ADMIN')") // esta peticion es unicamente para el rol ADMIN que actualmente no existe
+    @GetMapping()
     public List<Cita> obtenerTodas() {
         return citaRepository.findAll();
     }
 
-    @Operation(summary = "Consultar agenda por especialista", description = "Obtiene las sesiones filtradas por el identificador de un psicólogo. Utilizado para pintar la vista de calendario del médico.")
-    @GetMapping("/psicologo/{id}")
-    public List<Cita> obtenerPorPsicologo(@PathVariable Integer id) {
-        return citaRepository.findByPsicologoId(id);
-    }
 
     @Operation(summary = "Agendar Primera Sesión (Triaje)", description = "Petición del paciente para su primera evaluación. El sistema le asigna automáticamente al psicólogo de planta y valida que el horario esté libre de empalmes.")
     @PostMapping("/primera-cita")
@@ -79,5 +78,27 @@ public class CitaController {
     @PutMapping("/{id}/no-show")
     public Cita registrarNoShow(@PathVariable Integer id) {
         return citaService.registrarNoShow(id);
+    }
+
+    @Operation(summary = "Mi Agenda (Paginada)", description = "Lee el Token del psicólogo y devuelve exclusivamente sus citas ordenadas de la más reciente a la más antigua, utilizando paginación para no saturar la red.")
+    @PreAuthorize("hasRole('PSICOLOGO')") // <-- SOLO PSICÓLOGOS
+    @GetMapping("/mis-citas")
+    public Page<Cita> obtenerMisCitas(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable paginacion = PageRequest.of(page, size);
+        return citaService.obtenerMisCitasPaginadas(paginacion);
+    }
+
+    @Operation(summary = "Mi Agenda Activa", description = "Devuelve exclusivamente las citas en estado 'pendiente' o 'confirmada' del psicólogo logueado. Paginado y ordenado por fecha de proximidad.")
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @GetMapping("/mis-citas/activas")
+    public Page<Cita> obtenerMisCitasActivas(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable paginacion = PageRequest.of(page, size);
+        return citaService.obtenerMisCitasActivasPaginadas(paginacion);
     }
 }

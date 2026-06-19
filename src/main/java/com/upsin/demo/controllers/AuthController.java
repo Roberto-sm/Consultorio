@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 
-@Tag(name = "1. Autenticación y Seguridad", description = "Endpoints de acceso público para el registro de nuevos usuarios y la generación de tokens JWT.")
+@Tag(name = "2. Autenticación y Seguridad", description = "Endpoints de acceso público para el registro de nuevos usuarios y la generación de tokens JWT.")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

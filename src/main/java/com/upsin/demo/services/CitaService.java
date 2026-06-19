@@ -17,7 +17,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * Servicio Orquestador de Citas Médicas.
@@ -354,4 +357,31 @@ public class CitaService {
             throw new RuntimeException("Error: La sesión aún no termina. Debes esperar a que pase su horario (" + finCita.toLocalTime() + ").");
         }
     }
+
+    public Page<Cita> obtenerMisCitasPaginadas(Pageable pageable) {
+        // 1. Descubrimos quién es a través de su Token
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
+
+        // 2. Por seguridad, verificamos su rol
+        if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            throw new RuntimeException("Error de seguridad: Solo los psicólogos pueden acceder a su agenda personalizada.");
+        }
+        // 3. Vamos a la base de datos solo por SUS citas
+        return citaRepository.findByPsicologoIdOrderByFechaHoraDesc(usuarioLogueado.getId(), pageable);
+    }
+
+    public Page<Cita> obtenerMisCitasActivasPaginadas(Pageable pageable) {
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
+
+        if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            throw new RuntimeException("Error de seguridad: Solo los psicólogos pueden ver su agenda activa.");
+        }
+
+        // Definimos cuáles son los estados que el doctor necesita ver para trabajar
+        List<String> estadosActivos = Arrays.asList("pendiente", "confirmada");
+
+        // Ordenadas de la cita más próxima a la más lejana
+        return citaRepository.findByPsicologoIdAndEstadoInOrderByFechaHoraAsc(usuarioLogueado.getId(), estadosActivos, pageable);
+    }
+
 }
