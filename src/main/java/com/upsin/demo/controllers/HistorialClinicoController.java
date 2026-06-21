@@ -1,5 +1,6 @@
 package com.upsin.demo.controllers;
 
+import com.upsin.demo.dto.HistorialClinicoDTO;
 import com.upsin.demo.models.HistorialClinico;
 import com.upsin.demo.services.HistorialClinicoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ public class HistorialClinicoController {
     @Operation(summary = "Consultar el historial base de un paciente", description = "Devuelve la entidad principal del expediente (antecedentes fijos). Requiere rol PSICOLOGO.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @GetMapping("/paciente/{pacienteId}")
-    public HistorialClinico verHistorialBase(@PathVariable Integer pacienteId) {
+    public HistorialClinicoDTO verHistorialBase(@PathVariable Integer pacienteId) { // <-- CAMBIAR TIPO DE RETORNO
         return historialClinicoService.obtenerPorPaciente(pacienteId);
     }
 

@@ -5,6 +5,7 @@ import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Usuario;
 import com.upsin.demo.repositories.HistorialClinicoRepository;
 import com.upsin.demo.repositories.UsuarioRepository;
+import com.upsin.demo.dto.HistorialClinicoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -49,17 +50,17 @@ public class HistorialClinicoService {
     /**
      * Recupera el contenedor base del expediente.
      */
-    public HistorialClinico obtenerPorPaciente(Integer idPaciente) {
-        // 1. Identificamos quién hace la petición
+    public HistorialClinicoDTO obtenerPorPaciente(Integer idPaciente) {
+        //  Identificamos quién hace la petición
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
-        // 2. Buscamos el historial
+        //  Buscamos el historial
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico registrado."));
 
-        // 3. REGLA DE PRIVACIDAD: Si es psicólogo, verificar que el paciente le pertenezca
+        // Si es psicólogo, verificar que el paciente le pertenezca
         if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
             Paciente paciente = historial.getPaciente();
 
@@ -68,6 +69,21 @@ public class HistorialClinicoService {
             }
         }
 
-        return historial;
+        return convertirADto(historial);
+    }
+
+    private HistorialClinicoDTO convertirADto(HistorialClinico historial) {
+        HistorialClinicoDTO dto = new HistorialClinicoDTO();
+        dto.setIdHistorial(historial.getId());
+        dto.setAntecedentesFamiliares(historial.getAntecedentesFamiliares());
+        dto.setAntecedentesMedicos(historial.getAntecedentesMedicos());
+        dto.setFechaCreacion(historial.getFechaCreacion());
+
+        if (historial.getPaciente() != null && historial.getPaciente().getUsuario() != null) {
+            dto.setIdPaciente(historial.getPaciente().getId());
+            dto.setNombrePaciente(historial.getPaciente().getUsuario().getNombre());
+        }
+
+        return dto;
     }
 }
