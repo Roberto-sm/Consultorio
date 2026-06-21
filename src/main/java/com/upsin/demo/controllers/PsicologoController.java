@@ -34,8 +34,11 @@ public class PsicologoController {
 
     @Operation(summary = "Obtener todos los perfiles (Sin procesar)", description = "Devuelve los objetos completos directos de base de datos. Uso estrictamente administrativo.")
     @GetMapping
-    public List<Psicologo> obtenerTodos() {
-        return psicologoRepository.findAll();
+    public Page<Psicologo> obtenerTodos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return psicologoRepository.findAll(PageRequest.of(page, size));
     }
 
     @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso.")

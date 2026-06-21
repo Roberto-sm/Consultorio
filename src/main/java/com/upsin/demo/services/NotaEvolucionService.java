@@ -1,9 +1,6 @@
 package com.upsin.demo.services;
 
-import com.upsin.demo.models.Cita;
-import com.upsin.demo.models.HistorialClinico;
-import com.upsin.demo.models.NotaEvolucion;
-import com.upsin.demo.models.Usuario;
+import com.upsin.demo.models.*;
 import com.upsin.demo.repositories.CitaRepository;
 import com.upsin.demo.repositories.HistorialClinicoRepository;
 import com.upsin.demo.repositories.NotaEvolucionRepository;
@@ -73,10 +70,28 @@ public class NotaEvolucionService {
         return notaEvolucionRepository.save(nuevaNota);
     }
 
+    // Método para consultar todas las notas de un paciente (¡Con blindaje de privacidad!)
     public List<NotaEvolucion> consultarNotasDePaciente(Integer idPaciente) {
+
+        // 1. Identificamos quién está haciendo la petición a través de su Token JWT
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        // 2. Buscamos el historial clínico base
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico."));
 
+        // 3. Si es psicólogo, verificar que el paciente sea suyo
+        if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            Paciente paciente = historial.getPaciente();
+
+            if (paciente.getPsicologo() == null || !paciente.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+                throw new RuntimeException("Error de Privacidad: No tienes autorización para leer las notas de evolución de un paciente que está asignado a otro especialista.");
+            }
+        }
+
+        // 4. Si pasa la barrera de seguridad, devolvemos las notas ordenadas cronológicamente
         return notaEvolucionRepository.findByHistorialClinicoIdOrderByFechaRegistroDesc(historial.getId());
     }
 }

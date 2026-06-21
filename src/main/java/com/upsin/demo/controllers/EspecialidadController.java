@@ -2,6 +2,9 @@ package com.upsin.demo.controllers;
 
 import com.upsin.demo.models.Especialidad;
 import com.upsin.demo.repositories.EspecialidadRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +24,10 @@ public class EspecialidadController {
 
     @Operation(summary = "Obtener todas las especialidades", description = "Devuelve el catálogo completo de especialidades dadas de alta en el sistema. Endpoint público de consulta.")
     @GetMapping
-    public List<Especialidad> obtenerTodas() {
-        return especialidadRepository.findAll();
-    }
+    public Page<Especialidad> obtenerTodas(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
+            // Ejecutamos la consulta paginada directamente desde el repositorio
+            return especialidadRepository.findAll(PageRequest.of(page, size));
+        }
 }

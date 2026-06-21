@@ -1,6 +1,7 @@
 package com.upsin.demo.services;
 
 import com.upsin.demo.models.HistorialClinico;
+import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Usuario;
 import com.upsin.demo.repositories.HistorialClinicoRepository;
 import com.upsin.demo.repositories.UsuarioRepository;
@@ -49,7 +50,24 @@ public class HistorialClinicoService {
      * Recupera el contenedor base del expediente.
      */
     public HistorialClinico obtenerPorPaciente(Integer idPaciente) {
-        return historialClinicoRepository.findByPacienteId(idPaciente)
+        // 1. Identificamos quién hace la petición
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        // 2. Buscamos el historial
+        HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico registrado."));
+
+        // 3. REGLA DE PRIVACIDAD: Si es psicólogo, verificar que el paciente le pertenezca
+        if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            Paciente paciente = historial.getPaciente();
+
+            if (paciente.getPsicologo() == null || !paciente.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+                throw new RuntimeException("Error de Privacidad (HIPAA): No tienes permisos para visualizar el expediente clínico de un paciente que no te ha sido asignado.");
+            }
+        }
+
+        return historial;
     }
 }
