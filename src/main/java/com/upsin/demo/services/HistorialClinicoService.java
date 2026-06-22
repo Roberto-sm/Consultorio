@@ -28,23 +28,30 @@ public class HistorialClinicoService {
      * Actualiza los antecedentes médicos y familiares del paciente.
      * Valida mediante el contexto de Spring Security que la petición provenga de un psicólogo.
      */
-    public HistorialClinico actualizarAntecedentes(Integer idPaciente, HistorialClinico datosNuevos) {
+    public HistorialClinicoDTO actualizarAntecedentes(Integer idPaciente, HistorialClinico datosActualizados) {
 
+        // 1. Verificamos identidad y permisos (misma seguridad que ya tenías)
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario usuarioLogueado = usuarioRepository.findByCorreo(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
 
-        if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
-            throw new RuntimeException("Error de seguridad: Solo el personal de psicología puede actualizar el historial clínico.");
-        }
-
         HistorialClinico historial = historialClinicoRepository.findByPacienteId(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: El paciente no tiene un historial clínico registrado."));
 
-        historial.setAntecedentesMedicos(datosNuevos.getAntecedentesMedicos());
-        historial.setAntecedentesFamiliares(datosNuevos.getAntecedentesFamiliares());
+        if (usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            Paciente paciente = historial.getPaciente();
+            if (paciente.getPsicologo() == null || !paciente.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+                throw new RuntimeException("Error de Privacidad: No tienes permisos para editar este expediente.");
+            }
+        }
 
-        return historialClinicoRepository.save(historial);
+        // 2. Actualizamos los datos
+        historial.setAntecedentesFamiliares(datosActualizados.getAntecedentesFamiliares());
+        historial.setAntecedentesMedicos(datosActualizados.getAntecedentesMedicos());
+
+        // 3. Guardamos y transformamos usando el método convertirADto que ya teníamos
+        HistorialClinico historialGuardado = historialClinicoRepository.save(historial);
+        return convertirADto(historialGuardado);
     }
 
     /**

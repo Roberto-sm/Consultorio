@@ -4,6 +4,10 @@ import com.upsin.demo.models.Psicologo;
 import com.upsin.demo.dto.PsicologoDTO;
 import com.upsin.demo.models.Especialidad;
 import com.upsin.demo.repositories.PsicologoRepository;
+import com.upsin.demo.models.Usuario;
+import com.upsin.demo.repositories.UsuarioRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -20,6 +24,9 @@ public class PsicologoService {
 
     @Autowired
     private PsicologoRepository psicologoRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     /**
      * Orquesta la búsqueda paginada de doctores por especialidad.
@@ -47,7 +54,7 @@ public class PsicologoService {
      * Helper Method: Transforma un objeto Psicologo en un PsicologoDTO.
      * Oculta datos sensibles y aplana las colecciones utilizando Streams funcionales.
      */
-    private PsicologoDTO convertirADto(Psicologo psicologo) {
+    public PsicologoDTO convertirADto(Psicologo psicologo) {
         PsicologoDTO dto = new PsicologoDTO();
         dto.setIdPsicologo(psicologo.getId());
 
@@ -71,5 +78,32 @@ public class PsicologoService {
         }
 
         return dto;
+    }
+
+    public PsicologoDTO actualizarPerfil(Psicologo datosActualizados) {
+
+        // 1. Obtenemos el correo del token
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String correo = auth.getName();
+
+        // 2. Buscamos a qué psicólogo le pertenece este correo
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Psicologo psicologo = psicologoRepository.findById(usuario.getId())
+                .orElseThrow(() -> new RuntimeException("Psicólogo no encontrado"));
+
+        // 3. Actualizamos solo los datos profesionales
+        psicologo.setAñosExperiencia(datosActualizados.getAñosExperiencia());
+        psicologo.setResumen(datosActualizados.getResumen());
+        psicologo.setCedula(datosActualizados.getCedula());
+
+        if (datosActualizados.getEsDePlanta() != null) {
+            psicologo.setEsDePlanta(datosActualizados.getEsDePlanta());
+        }
+
+        // 4. Guardamos en MySQL y convertimos a DTO
+        Psicologo psicologoGuardado = psicologoRepository.save(psicologo);
+        return convertirADto(psicologoGuardado);
     }
 }

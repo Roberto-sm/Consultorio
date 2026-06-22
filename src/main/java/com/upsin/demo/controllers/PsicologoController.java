@@ -42,29 +42,12 @@ public class PsicologoController {
         return psicologoService.obtenerTodosLosPsicologosPaginados(paginacion);
     }
 
-    @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso.")
+    @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso. Devuelve el perfil actualizado en formato DTO plano.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/perfil")
-    public Psicologo actualizarPerfil(@RequestBody Psicologo datosActualizados) {
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String correo = auth.getName();
-
-        Usuario usuario = usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        Psicologo psicologo = psicologoRepository.findById(usuario.getId())
-                .orElseThrow(() -> new RuntimeException("Psicólogo no encontrado"));
-
-        psicologo.setAñosExperiencia(datosActualizados.getAñosExperiencia());
-        psicologo.setResumen(datosActualizados.getResumen());
-        psicologo.setCedula(datosActualizados.getCedula());
-
-        if (datosActualizados.getEsDePlanta() != null) {
-            psicologo.setEsDePlanta(datosActualizados.getEsDePlanta());
-        }
-
-        return psicologoRepository.save(psicologo);
+    public PsicologoDTO actualizarPerfil(@RequestBody Psicologo datosActualizados) {
+        // El controlador ahora solo recibe la petición y delega la responsabilidad al servicio
+        return psicologoService.actualizarPerfil(datosActualizados);
     }
 
     @Operation(summary = "Buscador de Especialidad (Paginado / DTO), busca una especialidad/tratamiento y regresa a los psicologos existentes para tratarlo", description = "Búsqueda relacional ignorando mayúsculas. Expone los datos a través de un DTO y utiliza paginación para optimizar la carga del servidor.")

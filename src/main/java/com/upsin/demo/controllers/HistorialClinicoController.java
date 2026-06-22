@@ -27,10 +27,10 @@ public class HistorialClinicoController {
     @Operation(summary = "Actualizar triaje y antecedentes", description = "Modifica los campos de antecedentes médicos y familiares. Protege la inmutabilidad de la fecha de creación original.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/paciente/{pacienteId}")
-    public HistorialClinico actualizarAntecedentes(
+    public HistorialClinicoDTO actualizarAntecedentes(
             @PathVariable Integer pacienteId,
-            @RequestBody HistorialClinico datosNuevos) {
+            @RequestBody HistorialClinico datosActualizados) {
 
-        return historialClinicoService.actualizarAntecedentes(pacienteId, datosNuevos);
+        return historialClinicoService.actualizarAntecedentes(pacienteId, datosActualizados);
     }
 }
