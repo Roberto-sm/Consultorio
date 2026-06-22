@@ -1,5 +1,6 @@
 package com.upsin.demo.services;
 
+import com.upsin.demo.dto.PacienteDTO;
 import com.upsin.demo.models.Cita;
 import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Psicologo;
@@ -35,7 +36,7 @@ public class PacienteService {
      * @return El registro del paciente actualizado en la base de datos.
      */
     @Transactional
-    public Paciente derivarPaciente(Integer idPaciente, Integer idNuevoPsicologo) {
+    public PacienteDTO derivarPaciente(Integer idPaciente, Integer idNuevoPsicologo) {
 
         Paciente paciente = pacienteRepository.findById(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Error: Paciente no encontrado"));
@@ -57,6 +58,25 @@ public class PacienteService {
         }
 
         paciente.setPsicologo(nuevoPsicologo);
-        return pacienteRepository.save(paciente);
+        return convertirAPacienteDTO(pacienteRepository.save(paciente));
+    }
+
+    private PacienteDTO convertirAPacienteDTO(Paciente paciente) {
+        PacienteDTO dto = new PacienteDTO();
+        dto.setIdPaciente(paciente.getId());
+        dto.setPenalizacionActiva(paciente.getPenalizacionActiva());
+
+        if (paciente.getUsuario() != null) {
+            dto.setNombrePaciente(paciente.getUsuario().getNombre());
+        }
+
+        if (paciente.getPsicologo() != null) {
+            dto.setIdPsicologoAsignado(paciente.getPsicologo().getId());
+            if (paciente.getPsicologo().getUsuario() != null) {
+                dto.setNombrePsicologoAsignado(paciente.getPsicologo().getUsuario().getNombre());
+            }
+        }
+
+        return dto;
     }
 }

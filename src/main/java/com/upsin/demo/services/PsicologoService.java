@@ -38,6 +38,11 @@ public class PsicologoService {
         return paginaPsicologos.map(this::convertirADto);
     }
 
+    public Page<PsicologoDTO> obtenerTodosLosPsicologosPaginados(Pageable pageable) {
+        Page<Psicologo> psicologos = psicologoRepository.findAll(pageable);
+        return psicologos.map(this::convertirADto); // Reutilizamos el mismo convertidor
+    }
+
     /**
      * Helper Method: Transforma un objeto Psicologo en un PsicologoDTO.
      * Oculta datos sensibles y aplana las colecciones utilizando Streams funcionales.
@@ -46,12 +51,18 @@ public class PsicologoService {
         PsicologoDTO dto = new PsicologoDTO();
         dto.setIdPsicologo(psicologo.getId());
 
+        // Agregamos los campos administrativos
+        dto.setAñosExperiencia(psicologo.getAñosExperiencia());
+        dto.setCedula(psicologo.getCedula());
+        dto.setResumen(psicologo.getResumen());
+        dto.setFotoUrl(psicologo.getFotoUrl());
+        dto.setEsDePlanta(psicologo.getEsDePlanta());
+
         if (psicologo.getUsuario() != null) {
             dto.setNombre(psicologo.getUsuario().getNombre());
             dto.setCorreo(psicologo.getUsuario().getCorreo());
+            dto.setSexo(psicologo.getUsuario().getSexo()); // Extraemos el sexo
         }
-
-        dto.setEsDePlanta(psicologo.getEsDePlanta());
 
         if (psicologo.getEspecialidades() != null) {
             dto.setEspecialidades(psicologo.getEspecialidades().stream()

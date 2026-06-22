@@ -34,11 +34,12 @@ public class PsicologoController {
 
     @Operation(summary = "Obtener todos los perfiles (Sin procesar)", description = "Devuelve los objetos completos directos de base de datos. Uso estrictamente administrativo.")
     @GetMapping
-    public Page<Psicologo> obtenerTodos(
+    public Page<PsicologoDTO> obtenerTodos(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        return psicologoRepository.findAll(PageRequest.of(page, size));
+        Pageable paginacion = PageRequest.of(page, size);
+        return psicologoService.obtenerTodosLosPsicologosPaginados(paginacion);
     }
 
     @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso.")

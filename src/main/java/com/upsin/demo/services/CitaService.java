@@ -360,7 +360,7 @@ public class CitaService {
         }
     }
 
-    public Page<Cita> obtenerMisCitasPaginadas(Pageable pageable) {
+    public Page<CitaDTO> obtenerMisCitasPaginadas(Pageable pageable) {
         // 1. Descubrimos quién es a través de su Token
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
 
@@ -368,8 +368,11 @@ public class CitaService {
         if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
             throw new RuntimeException("Error de seguridad: Solo los psicólogos pueden acceder a su agenda personalizada.");
         }
+
+        Page<Cita> paginaCitasPesadas = citaRepository.findByPsicologoIdOrderByFechaHoraDesc(usuarioLogueado.getId(), pageable);
+
         // 3. Vamos a la base de datos solo por SUS citas
-        return citaRepository.findByPsicologoIdOrderByFechaHoraDesc(usuarioLogueado.getId(), pageable);
+        return paginaCitasPesadas.map(this::convertirACitaDTO);
     }
 
     public Page<CitaDTO> obtenerMisCitasActivasPaginadas(Pageable pageable) {

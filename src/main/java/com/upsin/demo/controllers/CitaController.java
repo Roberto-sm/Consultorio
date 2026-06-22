@@ -84,7 +84,7 @@ public class CitaController {
     @Operation(summary = "Mi Agenda (Paginada)", description = "Lee el Token del psicólogo y devuelve exclusivamente sus citas ordenadas de la más reciente a la más antigua, utilizando paginación para no saturar la red.")
     @PreAuthorize("hasRole('PSICOLOGO')") // <-- SOLO PSICÓLOGOS
     @GetMapping("/mis-citas")
-    public Page<Cita> obtenerMisCitas(
+    public Page<CitaDTO> obtenerMisCitas(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 

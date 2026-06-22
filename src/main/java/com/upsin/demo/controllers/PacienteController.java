@@ -1,5 +1,6 @@
 package com.upsin.demo.controllers;
 
+import com.upsin.demo.dto.PacienteDTO;
 import com.upsin.demo.models.Paciente;
 import com.upsin.demo.services.PacienteService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ public class PacienteController {
     @Operation(summary = "Derivar paciente a especialista", description = "Transfiere el caso clínico a un nuevo psicólogo. Valida que el médico destino no sea de triaje y cierra automáticamente cualquier cita inicial pendiente. Requiere rol PSICOLOGO.")
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/{idPaciente}/derivar/{idNuevoPsicologo}")
-    public Paciente derivarPaciente(@PathVariable Integer idPaciente, @PathVariable Integer idNuevoPsicologo) {
+    public PacienteDTO derivarPaciente(@PathVariable Integer idPaciente, @PathVariable Integer idNuevoPsicologo) {
         return pacienteService.derivarPaciente(idPaciente, idNuevoPsicologo);
     }
 }
