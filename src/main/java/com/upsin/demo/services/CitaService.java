@@ -4,6 +4,8 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+
+import com.upsin.demo.dto.CitaDTO;
 import com.upsin.demo.models.Cita;
 import com.upsin.demo.models.Paciente;
 import com.upsin.demo.models.Psicologo;
@@ -47,7 +49,7 @@ public class CitaService {
      * Aplica reglas de horario de la clínica, validación de deudas, y asigna
      * automáticamente al psicólogo de planta evitando empalmes.
      */
-    public Cita agendarPrimeraCita(Cita nuevaCita) {
+    public CitaDTO agendarPrimeraCita(Cita nuevaCita) {
 
         validarReglasDeHorario(nuevaCita.getFechaHora());
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
@@ -78,14 +80,14 @@ public class CitaService {
         nuevaCita.setEstado("pendiente");
         nuevaCita.setEsPrimera(true);
 
-        return citaRepository.save(nuevaCita);
+        return convertirACitaDTO(citaRepository.save(nuevaCita));
     }
 
     /**
      * Agenda citas subsecuentes.
      * Enruta automáticamente al paciente con el especialista que tiene asignado.
      */
-    public Cita agendarCitaSeguimiento(Cita nuevaCita) {
+    public CitaDTO agendarCitaSeguimiento(Cita nuevaCita) {
 
         validarReglasDeHorario(nuevaCita.getFechaHora());
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
@@ -119,7 +121,7 @@ public class CitaService {
         nuevaCita.setEstado("pendiente");
         nuevaCita.setEsPrimera(false);
 
-        return citaRepository.save(nuevaCita);
+        return convertirACitaDTO(citaRepository.save(nuevaCita));
     }
 
     /**
@@ -127,7 +129,7 @@ public class CitaService {
      * Aplica la regla financiera: Si un paciente cancela con menos de 20 hrs de anticipación,
      * levanta un flag de penalización en el paciente y un rastro de auditoría en la cita.
      */
-    public Cita cancelarCita(Integer idCita) {
+    public CitaDTO cancelarCita(Integer idCita) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
@@ -166,10 +168,10 @@ public class CitaService {
         }
 
         cita.setEstado("cancelada");
-        return citaRepository.save(cita);
+        return convertirACitaDTO(citaRepository.save(cita));
     }
 
-    public Cita aprobarCita(Integer idCita) {
+    public CitaDTO aprobarCita(Integer idCita) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
@@ -193,10 +195,10 @@ public class CitaService {
         }
 
         cita.setEstado("confirmada");
-        return citaRepository.save(cita);
+        return convertirACitaDTO(citaRepository.save(cita));
     }
 
-    public Cita rechazarCita(Integer idCita) {
+    public CitaDTO rechazarCita(Integer idCita) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
@@ -220,10 +222,10 @@ public class CitaService {
         }
 
         cita.setEstado("rechazada");
-        return citaRepository.save(cita);
+        return convertirACitaDTO(citaRepository.save(cita));
     }
 
-    public Cita finalizarCita(Integer idCita) {
+    public CitaDTO finalizarCita(Integer idCita) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
@@ -244,10 +246,10 @@ public class CitaService {
         }
 
         cita.setEstado("finalizada");
-        return citaRepository.save(cita);
+        return convertirACitaDTO(citaRepository.save(cita));
     }
 
-    public Cita registrarNoShow(Integer idCita) {
+    public CitaDTO registrarNoShow(Integer idCita) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
         Cita cita = citaRepository.findById(idCita)
                 .orElseThrow(() -> new RuntimeException("Error: Cita no encontrada"));
@@ -269,7 +271,7 @@ public class CitaService {
         }
 
         cita.setEstado("no_asistio");
-        return citaRepository.save(cita);
+        return convertirACitaDTO(citaRepository.save(cita));
     }
 
     private Usuario obtenerUsuarioAutenticado() {
@@ -370,7 +372,7 @@ public class CitaService {
         return citaRepository.findByPsicologoIdOrderByFechaHoraDesc(usuarioLogueado.getId(), pageable);
     }
 
-    public Page<Cita> obtenerMisCitasActivasPaginadas(Pageable pageable) {
+    public Page<CitaDTO> obtenerMisCitasActivasPaginadas(Pageable pageable) {
         Usuario usuarioLogueado = obtenerUsuarioAutenticado();
 
         if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
@@ -380,8 +382,30 @@ public class CitaService {
         // Definimos cuáles son los estados que el doctor necesita ver para trabajar
         List<String> estadosActivos = Arrays.asList("pendiente", "confirmada");
 
+        Page<Cita> paginaCitasPesadas = citaRepository.findByPsicologoIdAndEstadoInOrderByFechaHoraAsc(
+                usuarioLogueado.getId(), estadosActivos, pageable);
+
         // Ordenadas de la cita más próxima a la más lejana
-        return citaRepository.findByPsicologoIdAndEstadoInOrderByFechaHoraAsc(usuarioLogueado.getId(), estadosActivos, pageable);
+        return paginaCitasPesadas.map(this::convertirACitaDTO);
     }
 
+    // Helper Method
+    private CitaDTO convertirACitaDTO(Cita cita) {
+        CitaDTO dto = new CitaDTO();
+        dto.setIdCita(cita.getId());
+        dto.setFechaHora(cita.getFechaHora());
+        dto.setEstado(cita.getEstado());
+        dto.setEsPrimera(cita.getEsPrimera());
+
+        // Extraemos los nombres de forma segura navegando por las relaciones
+        if(cita.getPaciente() != null && cita.getPaciente().getUsuario() != null){
+            dto.setNombrePaciente(cita.getPaciente().getUsuario().getNombre());
+        }
+
+        if(cita.getPsicologo() != null && cita.getPsicologo().getUsuario() != null){
+            dto.setNombrePsicologo(cita.getPsicologo().getUsuario().getNombre());
+        }
+
+        return dto;
+    }
 }
