@@ -102,4 +102,14 @@ public class CitaController {
         Pageable paginacion = PageRequest.of(page, size);
         return citaService.obtenerMisCitasActivasPaginadas(paginacion);
     }
+
+    @Operation(summary = "Agendar cita (Desde el perfil del Psicólogo)", description = "Permite al especialista agendar una cita directa a uno de sus pacientes. La cita nace automáticamente con estado 'confirmada' y devuelve un DTO ligero.")
+    @PreAuthorize("hasRole('PSICOLOGO')")
+    @PostMapping("/paciente/{idPaciente}/agendar")
+    public CitaDTO agendarCitaPorPsicologo(
+            @PathVariable Integer idPaciente,
+            @RequestBody Cita nuevaCita) {
+
+        return citaService.agendarCitaPorPsicologo(idPaciente, nuevaCita);
+    }
 }

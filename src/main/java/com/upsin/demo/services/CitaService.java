@@ -83,6 +83,38 @@ public class CitaService {
         return convertirACitaDTO(citaRepository.save(nuevaCita));
     }
 
+    public CitaDTO agendarCitaPorPsicologo(Integer idPaciente, Cita nuevaCita) {
+
+        // 1. Identificamos quién hace la petición
+        Usuario usuarioLogueado = obtenerUsuarioAutenticado();
+
+        if (!usuarioLogueado.getRol().equalsIgnoreCase("psicologo")) {
+            throw new RuntimeException("Error de seguridad: Solo los psicólogos pueden usar esta función administrativa.");
+        }
+
+        // 2. Buscamos al paciente
+        Paciente paciente = pacienteRepository.findById(idPaciente)
+                .orElseThrow(() -> new RuntimeException("Error: Paciente no encontrado."));
+
+        // 3. Regla de Privacidad: ¿El paciente le pertenece a este doctor?
+        if (paciente.getPsicologo() == null || !paciente.getPsicologo().getId().equals(usuarioLogueado.getId())) {
+            throw new RuntimeException("Error de Privacidad: No puedes agendarle una cita a un paciente que está asignado a otro especialista.");
+        }
+
+        // 4. Armamos la cita internamente para que el frontend no tenga que mandar datos de más
+        nuevaCita.setPaciente(paciente);
+        nuevaCita.setPsicologo(paciente.getPsicologo()); // Ahorramos una consulta a BD
+        nuevaCita.setEstado("confirmada"); // Nace confirmada automáticamente
+
+        if (nuevaCita.getEsPrimera() == null) {
+            nuevaCita.setEsPrimera(false); // Por defecto asumimos que es seguimiento
+        }
+
+        // 5. Guardamos y convertimos al DTO limpio
+        Cita citaGuardada = citaRepository.save(nuevaCita);
+        return convertirACitaDTO(citaGuardada);
+    }
+
     /**
      * Agenda citas subsecuentes.
      * Enruta automáticamente al paciente con el especialista que tiene asignado.
