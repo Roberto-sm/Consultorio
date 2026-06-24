@@ -7,7 +7,7 @@ import lombok.Data;
 @Schema(description = "Data Transfer Object (DTO) para recibir credenciales de acceso.")
 public class LoginRequest {
 
-    @Schema(description = "Correo electrónico registrado en base de datos", example = "paciente@upsin.edu.mx")
+    @Schema(description = "Correo electrónico registrado en base de datos", example = "tenma@email.com")
     private String correo;
 
     @Schema(description = "Contraseña en texto plano para ser validada contra el hash de BCrypt", example = "password123")

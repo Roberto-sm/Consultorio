@@ -27,7 +27,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         if (especialidadRepository.count() == 0 && usuarioRepository.count() == 0) {
-            System.out.println("🌱 [SEEDER] Iniciando inyección del Kit de Demostración Completo...");
+            System.out.println("[SEEDER] Iniciando inyección del Kit de Demostración Completo...");
 
             sembrarEspecialidades();
             sembrarPsicologos();
@@ -35,7 +35,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             sembrarCitasYNotas();
             sembrarAuditorias();
 
-            System.out.println("🚀 [SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
+            System.out.println("[SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
         }
     }
 
@@ -64,20 +64,22 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private void sembrarPacientesEHistoriales() {
         List<Psicologo> ps = psicologoRepository.findAll();
+        Psicologo tenma = ps.get(0);
+        Psicologo stone = ps.get(1);
 
         // 1. Natanael (Asignado a Tenma, sin penalización)
-        Usuario uNata = crearUsuarioBase("Reigen Arataka", "reigen@email.com", "paciente", "Masculino");
-        Paciente pac1 = crearPacienteBase(uNata, ps.get(0), false);
+        Usuario uReigen = crearUsuarioBase("Reigen Arataka", "reigen@email.com", "paciente", "Masculino");
+        Paciente pac1 = crearPacienteBase(uReigen, tenma, false);
         crearHistorialBase(pac1, "Padre con adicciones.", "Ansiedad social.");
 
         // 2. Luis (Asignado a Stone, CON penalización activa) - Cumple condición
-        Usuario uLuis = crearUsuarioBase("Kim Wexler", "kim@email.com", "paciente", "Femenino");
-        Paciente pac2 = crearPacienteBase(uLuis, ps.get(1), true);
+        Usuario ukim = crearUsuarioBase("Kim Wexler", "kim@email.com", "paciente", "Femenino");
+        Paciente pac2 = crearPacienteBase(ukim, tenma, true);
         crearHistorialBase(pac2, "Ninguno.", "Estrés crónico.");
 
         // 3. Hassan (Nuevo, sin asignar) - Cumple condición: todos con historial
-        Usuario uPeso = crearUsuarioBase("Justo Bolsa", "justo@email.com", "paciente", "Masculino");
-        Paciente pac3 = crearPacienteBase(uPeso, null, false);
+        Usuario uJusto = crearUsuarioBase("Justo Bolsa", "justo@email.com", "paciente", "Masculino");
+        Paciente pac3 = crearPacienteBase(uJusto, stone, false);
         crearHistorialBase(pac3, "Madre hipertensa.", "Insomnio severo.");
     }
 
@@ -85,17 +87,28 @@ public class DatabaseSeeder implements CommandLineRunner {
         List<Paciente> pacs = pacienteRepository.findAll();
         List<Psicologo> ps = psicologoRepository.findAll();
 
-        // Citas para cumplir todos los estados y multas
-        Cita cPendiente = crearCitaBase(pacs.get(2), ps.get(0), "pendiente", true, false, 2);
-        Cita cConfirmada = crearCitaBase(pacs.get(0), ps.get(0), "confirmada", false, false, 5);
-        Cita cCancelada = crearCitaBase(pacs.get(0), ps.get(0), "cancelada", false, false, 7);
-        Cita cRechazada = crearCitaBase(pacs.get(2), ps.get(0), "rechazada", true, false, -1);
+        Paciente reigen = pacs.get(0);   // Paciente 1
+        Paciente kim = pacs.get(1);  // Paciente 2
+        Paciente justo = pacs.get(2); // Paciente 3
 
-        // Cumple condición: No-show con multa aplicada = true (Justifica la penalización de Luis)
-        Cita cNoShow = crearCitaBase(pacs.get(1), ps.get(1), "no-show", false, true, -3);
+        Psicologo tenma = ps.get(0);   // Psicólogo 1
+        Psicologo stone = ps.get(1);   // Psicólogo 2
 
-        // Cumple condición: Finalizada
-        Cita cFinalizada = crearCitaBase(pacs.get(0), ps.get(0), "finalizada", false, false, -10);
+        LocalDate mañana = LocalDate.now().plusDays(1);
+        LocalDate enTresDias = LocalDate.now().plusDays(3);
+        LocalDate laSemanaPasada = LocalDate.now().minusDays(7);
+
+        Cita c1 = crearCitaEspecifica(kim, tenma, "pendiente", true, false, mañana.atTime(9, 0));
+
+        crearCitaEspecifica(kim, tenma, "rechazada", true, false, mañana.atTime(10, 0));
+
+        crearCitaEspecifica(justo, stone, "confirmada", false, false, enTresDias.atTime(16, 0));
+
+        crearCitaEspecifica(justo, stone, "cancelada", false, false, enTresDias.atTime(17, 0));
+
+        crearCitaEspecifica(kim, tenma, "no-show", false, true, laSemanaPasada.atTime(12, 0));
+
+        Cita cFinalizada = crearCitaEspecifica(reigen, tenma, "finalizada", false, false, laSemanaPasada.atTime(11, 0));
 
         // Cumple condición: Al menos una nota de evolución post-consulta
         NotaEvolucion nota = new NotaEvolucion();
@@ -103,6 +116,19 @@ public class DatabaseSeeder implements CommandLineRunner {
         nota.setObservaciones("El paciente muestra mejoría con ejercicios de respiración.");
         nota.setFechaRegistro(LocalDateTime.now());
         notaEvolucionRepository.save(nota);
+    }
+
+    // Método auxiliar con soporte de fecha y hora exacta
+    private Cita crearCitaEspecifica(Paciente pac, Psicologo psi, String estado, boolean primera, boolean multa, LocalDateTime fechaHora) {
+        Cita c = new Cita();
+        c.setPaciente(pac);
+        c.setPsicologo(psi);
+        c.setEstado(estado);
+        c.setEsPrimera(primera);
+        c.setMultaAplicada(multa);
+        c.setFechaHora(fechaHora);
+        c.setFechaModificacion(LocalDateTime.now());
+        return citaRepository.save(c);
     }
 
     // Reemplaza el método anterior por este:
