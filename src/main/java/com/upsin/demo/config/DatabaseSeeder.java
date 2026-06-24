@@ -58,25 +58,25 @@ public class DatabaseSeeder implements CommandLineRunner {
         Psicologo p1 = crearPsicologoBase(u1, 15, "CED-112233", true, "Especialista clínico.", 1);
 
         // 2. Dr. Stone
-        Usuario u2 = crearUsuarioBase("Dr. Senku Stone", "stone@email.com", "psicologo", "Masculino");
-        crearPsicologoBase(u2, 7, "CED-445566", false, "Especialista educativo.", 2);
+        Usuario u2 = crearUsuarioBase("Dr. Stone", "senku@email.com", "psicologo", "Masculino");
+        crearPsicologoBase(u2, 7, "CED-1000000", false, "Especialista educativo.", 2);
     }
 
     private void sembrarPacientesEHistoriales() {
         List<Psicologo> ps = psicologoRepository.findAll();
 
         // 1. Natanael (Asignado a Tenma, sin penalización)
-        Usuario uNata = crearUsuarioBase("Natanael Cano", "nata@email.com", "paciente", "Masculino");
+        Usuario uNata = crearUsuarioBase("Reigen Arataka", "reigen@email.com", "paciente", "Masculino");
         Paciente pac1 = crearPacienteBase(uNata, ps.get(0), false);
         crearHistorialBase(pac1, "Padre con adicciones.", "Ansiedad social.");
 
         // 2. Luis (Asignado a Stone, CON penalización activa) - Cumple condición
-        Usuario uLuis = crearUsuarioBase("Luis Conriquez", "luis@email.com", "paciente", "Masculino");
+        Usuario uLuis = crearUsuarioBase("Kim Wexler", "kim@email.com", "paciente", "Femenino");
         Paciente pac2 = crearPacienteBase(uLuis, ps.get(1), true);
         crearHistorialBase(pac2, "Ninguno.", "Estrés crónico.");
 
         // 3. Hassan (Nuevo, sin asignar) - Cumple condición: todos con historial
-        Usuario uPeso = crearUsuarioBase("Hassan Peso", "peso@email.com", "paciente", "Masculino");
+        Usuario uPeso = crearUsuarioBase("Justo Bolsa", "justo@email.com", "paciente", "Masculino");
         Paciente pac3 = crearPacienteBase(uPeso, null, false);
         crearHistorialBase(pac3, "Madre hipertensa.", "Insomnio severo.");
     }
