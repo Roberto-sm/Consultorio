@@ -37,7 +37,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             sembrarPsicologos();
             sembrarPacientesEHistoriales();
             sembrarCitasYNotas();
-            sembrarAuditoriasConSentidoLogico();
+            sembrarAuditorias();
 
             System.out.println("[SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
         }
@@ -130,7 +130,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         notaEvolucionRepository.save(nota);
     }
 
-    private void sembrarAuditoriasConSentidoLogico() {
+    private void sembrarAuditorias() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         List<Paciente> pacientes = pacienteRepository.findAll();
@@ -150,28 +150,26 @@ public class DatabaseSeeder implements CommandLineRunner {
         String haceDiezDias = LocalDateTime.now().minusDays(10).format(formatter);
         String haceOchoDias = LocalDateTime.now().minusDays(8).format(formatter);
 
-        String sqlPaciente = "INSERT INTO auditoria_pacientes (id_paciente, id_psicologo_anterior, id_psicologo_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?)";
-        jdbcTemplate.update(sqlPaciente, reigen.getId(), stone.getId(), tenma.getId(), haceSieteDias);
+        try {
+            jdbcTemplate.execute("SET AUTCOMMIT = 1;");
 
-        String sqlCita = "INSERT INTO auditoria_citas (id_cita, fecha_anterior, fecha_nueva, estado_anterior, estado_nuevo, es_primera_anterior, es_primera_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // Reigen transferido de Stone a Tenma
+            String sqlPaciente = "INSERT INTO auditoria_pacientes (id_paciente, id_psicologo_anterior, id_psicologo_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?)";
+            jdbcTemplate.update(sqlPaciente, reigen.getId(), stone.getId(), tenma.getId(), haceSieteDias);
 
-        jdbcTemplate.update(sqlCita,
-                citaNoShow.getId(),
-                fechaCitaStr, fechaCitaStr,
-                "pendiente", "confirmada",
-                0, 0,
-                haceDiezDias
-        );
+            //  Inyectar Auditoría de Citas
+            String sqlCita = "INSERT INTO auditoria_citas (id_cita, fecha_anterior, fecha_nueva, estado_anterior, estado_nuevo, es_primera_anterior, es_primera_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        jdbcTemplate.update(sqlCita,
-                citaNoShow.getId(),
-                fechaCitaStr, fechaCitaStr,
-                "confirmada", "no-show",
-                0, 0,
-                haceOchoDias
-        );
+            // De pendiente a confirmada
+            jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "pendiente", "confirmada", 0, 0, haceDiezDias);
 
-        System.out.println("⚙️ [AUDITORÍAS] Historiales clínicos insertados manualmente (Simulación de Triggers exitosa).");
+            // De confirmada a no-show
+            jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "confirmada", "no-show", 0, 0, haceOchoDias);
+
+            System.out.println("⚙️ [AUDITORÍAS] Historiales clínicos insertados manualmente (Simulación de Triggers exitosa).");
+        }catch (Exception e) {
+            System.err.println("❌ [ERROR AL SEMBRAR AUDITORÍAS]: " + e.getMessage());
+        }
     }
 
     // --- Métodos Constructores Auxiliares ---
