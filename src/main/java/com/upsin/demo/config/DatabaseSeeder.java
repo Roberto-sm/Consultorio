@@ -4,11 +4,13 @@ import com.upsin.demo.models.*;
 import com.upsin.demo.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 
@@ -24,6 +26,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Autowired private NotaEvolucionRepository notaEvolucionRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
+    @Autowired private JdbcTemplate jdbcTemplate;
+
     @Override
     public void run(String... args) throws Exception {
         if (especialidadRepository.count() == 0 && usuarioRepository.count() == 0) {
@@ -33,8 +37,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             sembrarPsicologos();
             sembrarPacientesEHistoriales();
             sembrarCitasYNotas();
-            sembrarAuditorias();
-            dispararTriggersAuditoria();
+            sembrarAuditoriasConSentidoLogico();
 
             System.out.println("[SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
         }
@@ -54,7 +57,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void sembrarPsicologos() {
-        // 1. Dr. Tenma (De Planta) - Cumple perfil actualizado y de_planta = true
+        // 1. Dr. Tenma (De Planta)
         Usuario u1 = crearUsuarioBase("Dr. Tenma Kenzo", "tenma@email.com", "psicologo", "Masculino");
         Psicologo p1 = crearPsicologoBase(u1, 15, "CED-112233", true, "Especialista clínico.", 1);
 
@@ -68,17 +71,17 @@ public class DatabaseSeeder implements CommandLineRunner {
         Psicologo tenma = ps.get(0);
         Psicologo stone = ps.get(1);
 
-        // 1. Natanael (Asignado a Tenma, sin penalización)
+        // 1. Reigen (Asignado a Tenma)
         Usuario uReigen = crearUsuarioBase("Reigen Arataka", "reigen@email.com", "paciente", "Masculino");
         Paciente pac1 = crearPacienteBase(uReigen, tenma, false);
         crearHistorialBase(pac1, "Padre con adicciones.", "Ansiedad social.");
 
-        // 2. Luis (Asignado a Stone, CON penalización activa) - Cumple condición
+        // 2. Kim (Asignada a Tenma, con penalización activa)
         Usuario ukim = crearUsuarioBase("Kim Wexler", "kim@email.com", "paciente", "Femenino");
         Paciente pac2 = crearPacienteBase(ukim, tenma, true);
         crearHistorialBase(pac2, "Ninguno.", "Estrés crónico.");
 
-        // 3. Hassan (Nuevo, sin asignar) - Cumple condición: todos con historial
+        // 3. Justo (Asignado a Stone)
         Usuario uJusto = crearUsuarioBase("Justo Bolsa", "justo@email.com", "paciente", "Masculino");
         Paciente pac3 = crearPacienteBase(uJusto, stone, false);
         crearHistorialBase(pac3, "Madre hipertensa.", "Insomnio severo.");
@@ -88,76 +91,90 @@ public class DatabaseSeeder implements CommandLineRunner {
         List<Paciente> pacs = pacienteRepository.findAll();
         List<Psicologo> ps = psicologoRepository.findAll();
 
-        Paciente reigen = pacs.get(0);   // Paciente 1
-        Paciente kim = pacs.get(1);  // Paciente 2
-        Paciente justo = pacs.get(2); // Paciente 3
+        Paciente reigen = pacs.get(0);
+        Paciente kim = pacs.get(1);
+        Paciente justo = pacs.get(2);
 
-        Psicologo tenma = ps.get(0);   // Psicólogo 1
-        Psicologo stone = ps.get(1);   // Psicólogo 2
+        Psicologo tenma = ps.get(0);
+        Psicologo stone = ps.get(1);
 
         LocalDate mañana = LocalDate.now().plusDays(1);
         LocalDate enTresDias = LocalDate.now().plusDays(3);
         LocalDate laSemanaPasada = LocalDate.now().minusDays(7);
 
-        Cita c1 = crearCitaEspecifica(kim, tenma, "pendiente", true, false, mañana.atTime(9, 0));
+        // Cita 1:
+        crearCitaEspecifica(kim, tenma, "pendiente", true, false, mañana.atTime(9, 0));
 
+        // Cita 2:
         crearCitaEspecifica(kim, tenma, "rechazada", true, false, mañana.atTime(10, 0));
 
+        // Cita 3:
         crearCitaEspecifica(justo, stone, "confirmada", false, false, enTresDias.atTime(16, 0));
 
+        // Cita 4:
         crearCitaEspecifica(justo, stone, "cancelada", false, false, enTresDias.atTime(17, 0));
 
+        // Cita 5:
         crearCitaEspecifica(kim, tenma, "no-show", false, true, laSemanaPasada.atTime(12, 0));
 
+        // Cita 6
         Cita cFinalizada = crearCitaEspecifica(reigen, tenma, "finalizada", false, false, laSemanaPasada.atTime(11, 0));
 
-        // Cumple condición: Al menos una nota de evolución post-consulta
+        // Nota de evolución para la Cita 6
         NotaEvolucion nota = new NotaEvolucion();
         nota.setCita(cFinalizada);
         nota.setObservaciones("El paciente muestra mejoría con ejercicios de respiración.");
+        nota.setDiagnostico("Ansiedad Leve.");
+        nota.setPlanTratamiento("Continuar con ejercicios diarios.");
         nota.setFechaRegistro(LocalDateTime.now());
         notaEvolucionRepository.save(nota);
     }
 
-    // Método auxiliar con soporte de fecha y hora exacta
-    private Cita crearCitaEspecifica(Paciente pac, Psicologo psi, String estado, boolean primera, boolean multa, LocalDateTime fechaHora) {
-        Cita c = new Cita();
-        c.setPaciente(pac);
-        c.setPsicologo(psi);
-        c.setEstado(estado);
-        c.setEsPrimera(primera);
-        c.setMultaAplicada(multa);
-        c.setFechaHora(fechaHora);
-        c.setFechaModificacion(LocalDateTime.now());
-        return citaRepository.save(c);
-    }
+    private void sembrarAuditoriasConSentidoLogico() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    // Reemplaza el método anterior por este:
-    private void sembrarAuditorias() {
-        List<Cita> citas = citaRepository.findAll();
         List<Paciente> pacientes = pacienteRepository.findAll();
         List<Psicologo> psicologos = psicologoRepository.findAll();
+        List<Cita> citas = citaRepository.findAll();
 
-        // 1. Disparar Trigger de Citas (Hacemos un UPDATE)
-        // Tomamos una cita pendiente y le cambiamos el estado a confirmada, y el booleano a false
-        Cita citaTrigger = citas.get(0);
-        citaTrigger.setEstado("confirmada");
-        citaTrigger.setEsPrimera(false);
-        // Al hacer save(), MySQL detectará el UPDATE y disparará 'tr_auditar_cambio_cita'
-        citaRepository.save(citaTrigger);
+        if(pacientes.isEmpty() || psicologos.size() < 2 || citas.isEmpty()) return;
 
-        // 2. Disparar Trigger de Pacientes (Hacemos un UPDATE)
-        // Tomamos al paciente de Stone y se lo pasamos a Tenma
-        Paciente pacienteTrigger = pacientes.get(1);
-        pacienteTrigger.setPsicologo(psicologos.get(0));
-        // Al hacer save(), MySQL detectará el UPDATE y disparará 'tr_auditar_cambio_psicologo'
-        pacienteRepository.save(pacienteTrigger);
+        Paciente reigen = pacientes.get(0);
+        Psicologo tenma = psicologos.get(0);
+        Psicologo stone = psicologos.get(1);
 
-        System.out.println("⚙️ [TRIGGERS] Updates realizados. Auditorías generadas automáticamente por MySQL.");
+        Cita citaNoShow = citas.get(4);
+        String fechaCitaStr = citaNoShow.getFechaHora().format(formatter);
+
+        String haceSieteDias = LocalDateTime.now().minusDays(7).format(formatter);
+        String haceDiezDias = LocalDateTime.now().minusDays(10).format(formatter);
+        String haceOchoDias = LocalDateTime.now().minusDays(8).format(formatter);
+
+        String sqlPaciente = "INSERT INTO auditoria_pacientes (id_paciente, id_psicologo_anterior, id_psicologo_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?)";
+        jdbcTemplate.update(sqlPaciente, reigen.getId(), stone.getId(), tenma.getId(), haceSieteDias);
+
+        String sqlCita = "INSERT INTO auditoria_citas (id_cita, fecha_anterior, fecha_nueva, estado_anterior, estado_nuevo, es_primera_anterior, es_primera_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        jdbcTemplate.update(sqlCita,
+                citaNoShow.getId(),
+                fechaCitaStr, fechaCitaStr,
+                "pendiente", "confirmada",
+                0, 0,
+                haceDiezDias
+        );
+
+        jdbcTemplate.update(sqlCita,
+                citaNoShow.getId(),
+                fechaCitaStr, fechaCitaStr,
+                "confirmada", "no-show",
+                0, 0,
+                haceOchoDias
+        );
+
+        System.out.println("⚙️ [AUDITORÍAS] Historiales clínicos insertados manualmente (Simulación de Triggers exitosa).");
     }
 
-    // --- Métodos Constructores Auxiliares (Para ahorrar líneas) ---
-
+    // --- Métodos Constructores Auxiliares ---
     private Usuario crearUsuarioBase(String nombre, String correo, String rol, String sexo) {
         Usuario u = new Usuario();
         u.setNombre(nombre);
@@ -198,30 +215,16 @@ public class DatabaseSeeder implements CommandLineRunner {
         h.setFechaCreacion(LocalDateTime.now());
         return historialClinicoRepository.save(h);
     }
-    
-    private void dispararTriggersAuditoria() {
-        List<Cita> citas = citaRepository.findAll();
-        List<Paciente> pacientes = pacienteRepository.findAll();
-        List<Psicologo> psicologos = psicologoRepository.findAll();
 
-        // 1. Disparar Trigger de Citas (Hacemos un UPDATE inofensivo)
-        // Tomamos la Cita 6 (la Finalizada) y le volvemos a poner 'finalizada'
-        // pero simulamos que el sistema corrigió el booleano de esPrimera a false
-        Cita citaTrigger = citas.get(5);
-        citaTrigger.setEsPrimera(false); // Simulamos el cambio
-        citaRepository.save(citaTrigger); // MySQL detecta el UPDATE y guarda la auditoría
-
-        // 2. Disparar Trigger de Pacientes
-        // Tomamos a Natanael (Paciente 1) que está con Tenma y lo pasamos temporalmente
-        // con Stone, lo guardamos, y luego lo regresamos con Tenma para dejar todo como estaba.
-        Paciente pacienteTrigger = pacientes.get(0);
-
-        pacienteTrigger.setPsicologo(psicologos.get(1)); // Stone
-        pacienteRepository.save(pacienteTrigger); // ¡Trigger disparado! (De Tenma a Stone)
-
-        pacienteTrigger.setPsicologo(psicologos.get(0)); // Lo regresamos con Tenma
-        pacienteRepository.save(pacienteTrigger); // ¡Trigger disparado otra vez! (De Stone a Tenma)
-
-        System.out.println("⚙️ [TRIGGERS] Updates realizados. MySQL generó las auditorías.");
+    private Cita crearCitaEspecifica(Paciente pac, Psicologo psi, String estado, boolean primera, boolean multa, LocalDateTime fechaHora) {
+        Cita c = new Cita();
+        c.setPaciente(pac);
+        c.setPsicologo(psi);
+        c.setEstado(estado);
+        c.setEsPrimera(primera);
+        c.setMultaAplicada(multa);
+        c.setFechaHora(fechaHora);
+        c.setFechaModificacion(LocalDateTime.now());
+        return citaRepository.save(c);
     }
 }
