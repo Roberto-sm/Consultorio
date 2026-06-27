@@ -35,7 +35,7 @@ public class AuthController implements AuthApi {
         return authService.registrarPaciente(usuario);
     }
 
-    @Operation(summary = "Registrar un nuevo Psicólogo", description = "Crea un usuario con el rol 'psicologo' y genera su perfil en la base de datos de profesionales. Por defecto, no se le asigna el estatus 'de planta'.")
+    @Override
     @PostMapping("/registro/psicologo")
     public Usuario registrarPsicologo(@Valid @RequestBody Usuario usuario) {
         return authService.registrarPsicologo(usuario);
