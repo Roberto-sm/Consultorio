@@ -1,3 +1,7 @@
+DROP TRIGGER IF EXISTS tr_auditar_cambio_psicologo$$
+DROP TRIGGER IF EXISTS tr_auditar_cambio_cita$$
+
+-- 3. Crear los triggers nativos
 CREATE TRIGGER tr_auditar_cambio_psicologo
     AFTER UPDATE ON pacientes
     FOR EACH ROW
@@ -13,7 +17,7 @@ BEGIN
             OLD.id, OLD.id_psicologo, NEW.id_psicologo, NOW()
         );
 END IF;
-END;
+END$$
 
 
 CREATE TRIGGER tr_auditar_cambio_cita
@@ -23,12 +27,12 @@ BEGIN
     IF NOT (OLD.fecha_hora <=> NEW.fecha_hora)
        OR NOT (OLD.estado <=> NEW.estado)
        OR NOT (OLD.es_primera <=> NEW.es_primera) THEN
-
+       
         INSERT INTO auditoria_citas (
-            id_cita,
-            fecha_anterior, fecha_nueva,
-            estado_anterior, estado_nuevo,
-            es_primera_anterior, es_primera_nuevo,
+            id_cita, 
+            fecha_anterior, fecha_nueva, 
+            estado_anterior, estado_nuevo, 
+            es_primera_anterior, es_primera_nuevo, 
             fecha_modificacion
         ) VALUES (
             OLD.id,
@@ -38,4 +42,4 @@ BEGIN
             NOW()
         );
 END IF;
-END;
+END$$
