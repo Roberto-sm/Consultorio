@@ -4,13 +4,11 @@ import com.upsin.demo.models.*;
 import com.upsin.demo.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 
@@ -26,20 +24,17 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Autowired private NotaEvolucionRepository notaEvolucionRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
-    @Autowired private JdbcTemplate jdbcTemplate;
-
     @Override
     public void run(String... args) throws Exception {
         if (especialidadRepository.count() == 0 && usuarioRepository.count() == 0) {
-            System.out.println("[SEEDER] Iniciando inyección del Kit de Demostración Completo...");
+            System.out.println("[SEEDER] Iniciando inyección del Kit de Demostración Base...");
 
             sembrarEspecialidades();
             sembrarPsicologos();
             sembrarPacientesEHistoriales();
             sembrarCitasYNotas();
-            sembrarAuditorias();
 
-            System.out.println("[SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
+            System.out.println("[SEEDER] Base de datos inyectada exitosamente (Entidades Base).");
         }
     }
 
@@ -57,11 +52,11 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void sembrarPsicologos() {
-        // 1. Dr. Tenma (De Planta)
+        // 1. Dr. Tenma (De Planta) -> ID 1
         Usuario u1 = crearUsuarioBase("Dr. Tenma Kenzo", "tenma@email.com", "psicologo", "Masculino");
         Psicologo p1 = crearPsicologoBase(u1, 15, "CED-112233", true, "Especialista clínico.", 1);
 
-        // 2. Dr. Stone
+        // 2. Dr. Stone -> ID 2
         Usuario u2 = crearUsuarioBase("Dr. Stone", "senku@email.com", "psicologo", "Masculino");
         crearPsicologoBase(u2, 7, "CED-1000000", false, "Especialista educativo.", 2);
     }
@@ -71,17 +66,17 @@ public class DatabaseSeeder implements CommandLineRunner {
         Psicologo tenma = ps.get(0);
         Psicologo stone = ps.get(1);
 
-        // 1. Reigen (Asignado a Tenma)
+        // 1. Reigen -> ID 1
         Usuario uReigen = crearUsuarioBase("Reigen Arataka", "reigen@email.com", "paciente", "Masculino");
         Paciente pac1 = crearPacienteBase(uReigen, tenma, false);
         crearHistorialBase(pac1, "Padre con adicciones.", "Ansiedad social.");
 
-        // 2. Kim (Asignada a Tenma, con penalización activa)
+        // 2. Kim -> ID 2
         Usuario ukim = crearUsuarioBase("Kim Wexler", "kim@email.com", "paciente", "Femenino");
         Paciente pac2 = crearPacienteBase(ukim, tenma, true);
         crearHistorialBase(pac2, "Ninguno.", "Estrés crónico.");
 
-        // 3. Justo (Asignado a Stone)
+        // 3. Justo -> ID 3
         Usuario uJusto = crearUsuarioBase("Justo Bolsa", "justo@email.com", "paciente", "Masculino");
         Paciente pac3 = crearPacienteBase(uJusto, stone, false);
         crearHistorialBase(pac3, "Madre hipertensa.", "Insomnio severo.");
@@ -102,72 +97,32 @@ public class DatabaseSeeder implements CommandLineRunner {
         LocalDate enTresDias = LocalDate.now().plusDays(3);
         LocalDate laSemanaPasada = LocalDate.now().minusDays(7);
 
-        // Cita 1:
+        // Cita 1: Pendiente
         crearCitaEspecifica(kim, tenma, "pendiente", true, false, mañana.atTime(9, 0));
-
-        // Cita 2:
+        // Cita 2: Rechazada
         crearCitaEspecifica(kim, tenma, "rechazada", true, false, mañana.atTime(10, 0));
-
-        // Cita 3:
+        // Cita 3: Confirmada
         crearCitaEspecifica(justo, stone, "confirmada", false, false, enTresDias.atTime(16, 0));
-
-        // Cita 4:
+        // Cita 4: Cancelada
         crearCitaEspecifica(justo, stone, "cancelada", false, false, enTresDias.atTime(17, 0));
-
-        // Cita 5:
+        // Cita 5: No-Show
         crearCitaEspecifica(kim, tenma, "no-show", false, true, laSemanaPasada.atTime(12, 0));
-
-        // Cita 6
+        // Cita 6: Finalizada
         Cita cFinalizada = crearCitaEspecifica(reigen, tenma, "finalizada", false, false, laSemanaPasada.atTime(11, 0));
 
-        // Nota de evolución para la Cita 6
-        NotaEvolucion nota = new NotaEvolucion();
-        nota.setCita(cFinalizada);
-        nota.setObservaciones("El paciente muestra mejoría con ejercicios de respiración.");
-        nota.setDiagnostico("Ansiedad Leve.");
-        nota.setPlanTratamiento("Continuar con ejercicios diarios.");
-        nota.setFechaRegistro(LocalDateTime.now());
-        notaEvolucionRepository.save(nota);
-    }
+        HistorialClinico historialReigen = historialClinicoRepository.findByPacienteId(reigen.getId())
+                .orElse(null);
 
-    private void sembrarAuditorias() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        List<Paciente> pacientes = pacienteRepository.findAll();
-        List<Psicologo> psicologos = psicologoRepository.findAll();
-        List<Cita> citas = citaRepository.findAll();
-
-        if(pacientes.isEmpty() || psicologos.size() < 2 || citas.isEmpty()) return;
-
-        Paciente reigen = pacientes.get(0);
-        Psicologo tenma = psicologos.get(0);
-        Psicologo stone = psicologos.get(1);
-
-        Cita citaNoShow = citas.get(4);
-        String fechaCitaStr = citaNoShow.getFechaHora().format(formatter);
-
-        String haceSieteDias = LocalDateTime.now().minusDays(7).format(formatter);
-        String haceDiezDias = LocalDateTime.now().minusDays(10).format(formatter);
-        String haceOchoDias = LocalDateTime.now().minusDays(8).format(formatter);
-
-        try {
-            // 1. Inyectar Auditoria de Paciente (Reigen transferido de Stone a Tenma)
-            String sqlPaciente = "INSERT INTO auditoria_pacientes (id_paciente, id_psicologo_anterior, id_psicologo_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?)";
-            jdbcTemplate.update(sqlPaciente, reigen.getId(), stone.getId(), tenma.getId(), haceSieteDias);
-
-            // 2. Inyectar Auditoria de Citas (El historial del No-Show de Kim)
-            String sqlCita = "INSERT INTO auditoria_citas (id_cita, fecha_anterior, fecha_nueva, estado_anterior, estado_nuevo, es_primera_anterior, es_primera_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-            // Primer cambio: De pendiente a confirmada
-            jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "pendiente", "confirmada", 0, 0, haceDiezDias);
-
-            // Segundo cambio: De confirmada a no-show
-            jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "confirmada", "no-show", 0, 0, haceOchoDias);
-
-            System.out.println("[AUDITORÍAS] Historiales de simulación insertados exitosamente en MySQL.");
-        } catch (Exception e) {
-            System.err.println("[ERROR CRÍTICO AL SEMBRAR AUDITORÍAS]:");
-            e.printStackTrace(); // Esto obligara a Railway a imprimir el error exacto si algo falla
+        if (historialReigen != null) {
+            NotaEvolucion nota = new NotaEvolucion();
+            nota.setHistorialClinico(historialReigen);
+            nota.setCita(cFinalizada);
+            nota.setObservaciones("El paciente muestra mejoría con ejercicios de respiración.");
+            nota.setDiagnostico("Ansiedad Leve.");
+            nota.setPlanTratamiento("Continuar con ejercicios diarios.");
+            nota.setFechaRegistro(LocalDateTime.now());
+            notaEvolucionRepository.save(nota);
         }
     }
 
