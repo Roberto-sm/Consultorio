@@ -3,6 +3,7 @@ package com.upsin.demo.controllers;
 import com.upsin.demo.dto.HistorialClinicoDTO;
 import com.upsin.demo.models.HistorialClinico;
 import com.upsin.demo.services.HistorialClinicoService;
+import com.upsin.demo.controllers.docs.HistorialClinicoApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 @Tag(name = "7. Expediente Clínico", description = "Manejo de antecedentes generales y estructura base del paciente.")
 @RestController
 @RequestMapping("/api/historial")
-public class HistorialClinicoController {
+public class HistorialClinicoController implements HistorialClinicoApi {
 
     @Autowired
     private HistorialClinicoService historialClinicoService;
@@ -24,13 +25,10 @@ public class HistorialClinicoController {
         return historialClinicoService.obtenerPorPaciente(pacienteId);
     }
 
-    @Operation(summary = "Actualizar triaje y antecedentes", description = "Modifica los campos de antecedentes médicos y familiares. Protege la inmutabilidad de la fecha de creación original.")
+    @Override
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/paciente/{pacienteId}")
-    public HistorialClinicoDTO actualizarAntecedentes(
-            @PathVariable Integer pacienteId,
-            @RequestBody HistorialClinico datosActualizados) {
-
+    public HistorialClinicoDTO actualizarAntecedentes(@PathVariable Integer pacienteId, @RequestBody HistorialClinico datosActualizados) {
         return historialClinicoService.actualizarAntecedentes(pacienteId, datosActualizados);
     }
 }

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -23,11 +24,12 @@ import com.upsin.demo.utils.SwaggerConstants;
 @Tag(name = "2. Autenticación y Seguridad", description = "Endpoints de acceso público para el registro de nuevos usuarios y la generación de tokens JWT.")
 @RestController
 @RequestMapping("/api/auth")
-public abstract class AuthController implements AuthApi {
+public class AuthController implements AuthApi {
 
     @Autowired
     private AuthService authService;
 
+    @Override
     @PostMapping("/registro")
     public Usuario registrarPaciente(@Valid @RequestBody Usuario usuario) {
         return authService.registrarPaciente(usuario);
@@ -44,6 +46,7 @@ public abstract class AuthController implements AuthApi {
             @ApiResponse(responseCode = "200", description = "Token generado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Credenciales incorrectas")
     })
+
     @PostMapping("/login")
     public AuthResponse login(@RequestBody LoginRequest request) {
         return authService.login(request);

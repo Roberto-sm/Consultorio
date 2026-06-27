@@ -2,6 +2,7 @@ package com.upsin.demo.controllers;
 
 import com.upsin.demo.models.NotaEvolucion;
 import com.upsin.demo.services.NotaEvolucionService;
+import com.upsin.demo.controllers.docs.NotaEvolucionApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,12 +14,12 @@ import java.util.List;
 @Tag(name = "5. Notas de Evolución", description = "Endpoints para la captura y lectura cronológica de las observaciones de cada sesión terapéutica.")
 @RestController
 @RequestMapping("/api/notas")
-public class NotaEvolucionController {
+public class NotaEvolucionController implements NotaEvolucionApi {
 
     @Autowired
     private NotaEvolucionService notaEvolucionService;
 
-    @Operation(summary = "Capturar hoja de evolución", description = "Redacta una nota clínica vinculándola permanentemente a la sesión (cita) que acaba de concluir. Bloquea duplicados automáticamente.")
+    @Override
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PostMapping("/cita/{idCita}")
     public NotaEvolucion crearNota(@PathVariable Integer idCita, @RequestBody NotaEvolucion nuevaNota) {

@@ -34,6 +34,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             sembrarPacientesEHistoriales();
             sembrarCitasYNotas();
             sembrarAuditorias();
+            dispararTriggersAuditoria();
 
             System.out.println("[SEEDER] Base de datos inyectada con todos los casos de prueba (CRUD, Auditorías y Estados).");
         }
@@ -197,16 +198,30 @@ public class DatabaseSeeder implements CommandLineRunner {
         h.setFechaCreacion(LocalDateTime.now());
         return historialClinicoRepository.save(h);
     }
+    
+    private void dispararTriggersAuditoria() {
+        List<Cita> citas = citaRepository.findAll();
+        List<Paciente> pacientes = pacienteRepository.findAll();
+        List<Psicologo> psicologos = psicologoRepository.findAll();
 
-    private Cita crearCitaBase(Paciente pac, Psicologo psi, String estado, boolean primera, boolean multa, int dias) {
-        Cita c = new Cita();
-        c.setPaciente(pac);
-        c.setPsicologo(psi);
-        c.setEstado(estado);
-        c.setEsPrimera(primera);
-        c.setMultaAplicada(multa);
-        c.setFechaHora(LocalDateTime.now().plusDays(dias));
-        c.setFechaModificacion(LocalDateTime.now());
-        return citaRepository.save(c);
+        // 1. Disparar Trigger de Citas (Hacemos un UPDATE inofensivo)
+        // Tomamos la Cita 6 (la Finalizada) y le volvemos a poner 'finalizada'
+        // pero simulamos que el sistema corrigió el booleano de esPrimera a false
+        Cita citaTrigger = citas.get(5);
+        citaTrigger.setEsPrimera(false); // Simulamos el cambio
+        citaRepository.save(citaTrigger); // MySQL detecta el UPDATE y guarda la auditoría
+
+        // 2. Disparar Trigger de Pacientes
+        // Tomamos a Natanael (Paciente 1) que está con Tenma y lo pasamos temporalmente
+        // con Stone, lo guardamos, y luego lo regresamos con Tenma para dejar todo como estaba.
+        Paciente pacienteTrigger = pacientes.get(0);
+
+        pacienteTrigger.setPsicologo(psicologos.get(1)); // Stone
+        pacienteRepository.save(pacienteTrigger); // ¡Trigger disparado! (De Tenma a Stone)
+
+        pacienteTrigger.setPsicologo(psicologos.get(0)); // Lo regresamos con Tenma
+        pacienteRepository.save(pacienteTrigger); // ¡Trigger disparado otra vez! (De Stone a Tenma)
+
+        System.out.println("⚙️ [TRIGGERS] Updates realizados. MySQL generó las auditorías.");
     }
 }

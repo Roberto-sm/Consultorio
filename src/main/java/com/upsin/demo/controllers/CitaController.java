@@ -4,6 +4,7 @@ import com.upsin.demo.dto.CitaDTO;
 import com.upsin.demo.models.Cita;
 import com.upsin.demo.repositories.CitaRepository;
 import com.upsin.demo.services.CitaService;
+import com.upsin.demo.controllers.docs.CitaApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ import java.util.List;
 @Tag(name = "4. Gestión de Citas", description = "Máquina de estados para la agenda de la clínica. Controla validaciones de horario, empalmes, confirmaciones y aplicación de multas financieras.")
 @RestController
 @RequestMapping("/api/citas")
-public class CitaController {
+public class CitaController implements CitaApi {
 
     @Autowired
     private CitaRepository citaRepository;
@@ -34,13 +35,13 @@ public class CitaController {
     }
 
 
-    @Operation(summary = "Agendar Primera Sesión (Triaje)", description = "Petición del paciente para su primera evaluación. El sistema le asigna automáticamente al psicólogo de planta y valida que el horario esté libre de empalmes.")
+    @Override
     @PostMapping("/primera-cita")
     public CitaDTO agendarPrimeraCita(@RequestBody Cita cita) {
         return citaService.agendarPrimeraCita(cita);
     }
 
-    @Operation(summary = "Agendar Sesión de Seguimiento", description = "Petición del paciente regular. El sistema enruta automáticamente la solicitud al especialista que el paciente tiene asignado en su perfil.")
+    @Override
     @PostMapping("/seguimiento")
     public CitaDTO agendarCitaSeguimiento(@RequestBody Cita cita) {
         return citaService.agendarCitaSeguimiento(cita);
@@ -103,13 +104,10 @@ public class CitaController {
         return citaService.obtenerMisCitasActivasPaginadas(paginacion);
     }
 
-    @Operation(summary = "Agendar cita (Desde el perfil del Psicólogo)", description = "Permite al especialista agendar una cita directa a uno de sus pacientes. La cita nace automáticamente con estado 'confirmada' y devuelve un DTO ligero.")
+    @Override
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PostMapping("/paciente/{idPaciente}/agendar")
-    public CitaDTO agendarCitaPorPsicologo(
-            @PathVariable Integer idPaciente,
-            @RequestBody Cita nuevaCita) {
-
+    public CitaDTO agendarCitaPorPsicologo(@PathVariable Integer idPaciente, @RequestBody Cita nuevaCita) {
         return citaService.agendarCitaPorPsicologo(idPaciente, nuevaCita);
     }
 }

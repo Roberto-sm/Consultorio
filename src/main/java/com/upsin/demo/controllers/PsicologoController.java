@@ -1,9 +1,11 @@
 package com.upsin.demo.controllers;
 
+import com.upsin.demo.controllers.docs.NotaEvolucionApi;
 import com.upsin.demo.models.Psicologo;
 import com.upsin.demo.dto.PsicologoDTO;
 import com.upsin.demo.services.PsicologoService;
 import com.upsin.demo.repositories.PsicologoRepository;
+import com.upsin.demo.controllers.docs.PsicologoApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,7 @@ import java.util.List;
 @Tag(name = "3. Directorio Médico", description = "Buscador de especialistas, paginación, y gestión de perfiles profesionales.")
 @RestController
 @RequestMapping("/api/psicologos")
-public class PsicologoController {
+public class PsicologoController implements PsicologoApi {
 
     @Autowired
     private PsicologoRepository psicologoRepository;
@@ -42,11 +44,11 @@ public class PsicologoController {
         return psicologoService.obtenerTodosLosPsicologosPaginados(paginacion);
     }
 
-    @Operation(summary = "Actualizar el perfil del psicologo logueado", description = "Endpoint protegido para que un psicólogo pueda editar su currículum, años de experiencia y cédula basándose en su Token de acceso. Devuelve el perfil actualizado en formato DTO plano.")
+    // Asegúrate de implementar la interfaz: public class PsicologoController implements PsicologoApi {
+    @Override
     @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/perfil")
     public PsicologoDTO actualizarPerfil(@RequestBody Psicologo datosActualizados) {
-        // El controlador ahora solo recibe la petición y delega la responsabilidad al servicio
         return psicologoService.actualizarPerfil(datosActualizados);
     }
 

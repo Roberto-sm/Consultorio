@@ -7,11 +7,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Autenticación", description = "Endpoints para registro y acceso a la plataforma")
 public interface AuthApi {
-
     @Operation(summary = "Registrar un nuevo Paciente", description = "Crea un usuario paciente, encripta su contraseña y le asigna psicólogo.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Paciente registrado exitosamente"),
@@ -23,10 +20,11 @@ public interface AuthApi {
             content = @Content(
                     mediaType = "application/json",
                     examples = @ExampleObject(
-                            name = "Ejemplo", value = SwaggerConstants.EJEMPLO_REGISTRO_PACIENTE
+                            name = "Ejemplo", value = SwaggerConstants.EJEMPLO_REGISTRO
                     )
             )
     )
         // Solo declaramos el método, no le ponemos llaves {}
     Usuario registrarPaciente(Usuario usuario);
+
 }
