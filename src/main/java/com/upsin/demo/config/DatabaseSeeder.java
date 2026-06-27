@@ -83,8 +83,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void sembrarCitasYNotas() {
-        List<Paciente> pacs = pacienteRepository.findAll(); [cite: 18]
-        List<Psicologo> ps = psicologoRepository.findAll(); [cite: 19]
+        List<Paciente> pacs = pacienteRepository.findAll();
+        List<Psicologo> ps = psicologoRepository.findAll();
 
         Paciente reigen = pacs.get(0);
         Paciente kim = pacs.get(1);
@@ -124,7 +124,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             nota.setPlanTratamiento("Continuar con bitácora de sueño y pausas activas.");
             nota.setFechaRegistro(pasadoLunes.plusMinutes(55)); // Registrada inmediatamente después de la sesión
 
-            notaEvolucionRepository.save(nota); [cite: 29]
+            notaEvolucionRepository.save(nota);
         }
     }
 
