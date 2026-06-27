@@ -83,8 +83,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void sembrarCitasYNotas() {
-        List<Paciente> pacs = pacienteRepository.findAll();
-        List<Psicologo> ps = psicologoRepository.findAll();
+        List<Paciente> pacs = pacienteRepository.findAll(); [cite: 18]
+        List<Psicologo> ps = psicologoRepository.findAll(); [cite: 19]
 
         Paciente reigen = pacs.get(0);
         Paciente kim = pacs.get(1);
@@ -93,36 +93,38 @@ public class DatabaseSeeder implements CommandLineRunner {
         Psicologo tenma = ps.get(0);
         Psicologo stone = ps.get(1);
 
-        LocalDate mañana = LocalDate.now().plusDays(1);
-        LocalDate enTresDias = LocalDate.now().plusDays(3);
-        LocalDate laSemanaPasada = LocalDate.now().minusDays(7);
+        LocalDateTime pasadoLunes = LocalDateTime.of(2026, 8, 17, 11, 0);
+        LocalDateTime pasadoMiercoles = LocalDateTime.of(2026, 8, 19, 12, 0);
 
-        // Cita 1: Pendiente
-        crearCitaEspecifica(kim, tenma, "pendiente", true, false, mañana.atTime(9, 0));
+        LocalDateTime lunesFuturo9AM = LocalDateTime.of(2026, 8, 24, 9, 0);
+        LocalDateTime lunesFuturo10AM = LocalDateTime.of(2026, 8, 24, 10, 0);
+        LocalDateTime martesFuturo4PM = LocalDateTime.of(2026, 8, 31, 16, 0);
+        LocalDateTime martesFuturo5PM = LocalDateTime.of(2026, 8, 31, 17, 0);
+
+        // Cita 1: Finalizada
+        Cita c1 = crearCitaEspecifica(kim, tenma, "finalizada", true, false, pasadoLunes);
         // Cita 2: Rechazada
-        crearCitaEspecifica(kim, tenma, "rechazada", true, false, mañana.atTime(10, 0));
-        // Cita 3: Confirmada
-        crearCitaEspecifica(justo, stone, "confirmada", false, false, enTresDias.atTime(16, 0));
-        // Cita 4: Cancelada
-        crearCitaEspecifica(justo, stone, "cancelada", false, false, enTresDias.atTime(17, 0));
+        crearCitaEspecifica(kim, tenma, "rechazada", true, false, lunesFuturo10AM);
+        // Cita 3: Cancelada
+        crearCitaEspecifica(justo, stone, "cancelada", false, false, martesFuturo4PM);
+        // Cita 4: confirmada
+        crearCitaEspecifica(justo, stone, "confirmada", false, false, martesFuturo5PM);
         // Cita 5: No-Show
-        crearCitaEspecifica(kim, tenma, "no-show", false, true, laSemanaPasada.atTime(12, 0));
-        // Cita 6: Finalizada
-        Cita cFinalizada = crearCitaEspecifica(reigen, tenma, "finalizada", false, false, laSemanaPasada.atTime(11, 0));
+        crearCitaEspecifica(kim, tenma, "no-show", false, true, pasadoMiercoles);
+        // Cita 6: Pendiente
+        crearCitaEspecifica(reigen, tenma, "pendiente", false, false, lunesFuturo9AM);
 
-        HistorialClinico historialReigen = historialClinicoRepository.findByPacienteId(reigen.getId())
-                .orElse(null);
-
-
-        if (historialReigen != null) {
+        HistorialClinico historialKim = historialClinicoRepository.findByPacienteId(kim.getId()).orElse(null);
+        if (historialKim != null) {
             NotaEvolucion nota = new NotaEvolucion();
-            nota.setHistorialClinico(historialReigen);
-            nota.setCita(cFinalizada);
+            nota.setHistorialClinico(historialKim);
+            nota.setCita(c1); // Perfectamente asociada a la Cita 1 histórica y finalizada
             nota.setObservaciones("El paciente muestra mejoría con ejercicios de respiración.");
-            nota.setDiagnostico("Ansiedad Leve.");
-            nota.setPlanTratamiento("Continuar con ejercicios diarios.");
-            nota.setFechaRegistro(LocalDateTime.now());
-            notaEvolucionRepository.save(nota);
+            nota.setDiagnostico("Ansiedad situacional controlada.");
+            nota.setPlanTratamiento("Continuar con bitácora de sueño y pausas activas.");
+            nota.setFechaRegistro(pasadoLunes.plusMinutes(55)); // Registrada inmediatamente después de la sesión
+
+            notaEvolucionRepository.save(nota); [cite: 29]
         }
     }
 
