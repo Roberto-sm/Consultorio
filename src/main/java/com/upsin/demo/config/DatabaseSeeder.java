@@ -151,24 +151,23 @@ public class DatabaseSeeder implements CommandLineRunner {
         String haceOchoDias = LocalDateTime.now().minusDays(8).format(formatter);
 
         try {
-            jdbcTemplate.execute("SET AUTCOMMIT = 1;");
-
-            // Reigen transferido de Stone a Tenma
+            // 1. Inyectar Auditoria de Paciente (Reigen transferido de Stone a Tenma)
             String sqlPaciente = "INSERT INTO auditoria_pacientes (id_paciente, id_psicologo_anterior, id_psicologo_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?)";
             jdbcTemplate.update(sqlPaciente, reigen.getId(), stone.getId(), tenma.getId(), haceSieteDias);
 
-            //  Inyectar Auditoría de Citas
+            // 2. Inyectar Auditoria de Citas (El historial del No-Show de Kim)
             String sqlCita = "INSERT INTO auditoria_citas (id_cita, fecha_anterior, fecha_nueva, estado_anterior, estado_nuevo, es_primera_anterior, es_primera_nuevo, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-            // De pendiente a confirmada
+            // Primer cambio: De pendiente a confirmada
             jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "pendiente", "confirmada", 0, 0, haceDiezDias);
 
-            // De confirmada a no-show
+            // Segundo cambio: De confirmada a no-show
             jdbcTemplate.update(sqlCita, citaNoShow.getId(), fechaCitaStr, fechaCitaStr, "confirmada", "no-show", 0, 0, haceOchoDias);
 
-            System.out.println("⚙️ [AUDITORÍAS] Historiales clínicos insertados manualmente (Simulación de Triggers exitosa).");
-        }catch (Exception e) {
-            System.err.println("❌ [ERROR AL SEMBRAR AUDITORÍAS]: " + e.getMessage());
+            System.out.println("[AUDITORÍAS] Historiales de simulación insertados exitosamente en MySQL.");
+        } catch (Exception e) {
+            System.err.println("[ERROR CRÍTICO AL SEMBRAR AUDITORÍAS]:");
+            e.printStackTrace(); // Esto obligara a Railway a imprimir el error exacto si algo falla
         }
     }
 
