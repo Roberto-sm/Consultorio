@@ -1,0 +1,12 @@
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE auditoria_citas;
+TRUNCATE TABLE auditoria_pacientes;
+TRUNCATE TABLE notas_evolucion;
+TRUNCATE TABLE citas;
+TRUNCATE TABLE historial_clinico;
+TRUNCATE TABLE pacientes;
+TRUNCATE TABLE psicologo_especialidad;
+TRUNCATE TABLE psicologos;
+TRUNCATE TABLE especialidades;
+TRUNCATE TABLE usuarios;
+SET FOREIGN_KEY_CHECKS = 1;
