@@ -118,10 +118,9 @@ Todos los endpoints `POST`/`PUT` en Swagger incluyen ejemplos de Request Body li
 
 ## 5. Reglas de Negocio Clave
 
-Antes de modificar cualquier lógica de citas o expedientes, familiarízate con estas restricciones. La especificación completa está en [`bussines_rules.md`](./BUSINESS_RULES.md).
+Antes de modificar cualquier lógica de citas o expedientes, familiarízate con estas restricciones. La especificación completa está en [`business_rules.md`](business_rules.md).
 
 Diagrama Autenticacion del token (JWT)
-
 sequenceDiagram
     autonumber
     actor Cliente as Cliente (Postman/Frontend)
@@ -167,7 +166,7 @@ sequenceDiagram
 [pendiente ──► confirmada/rechazada] ──► [confirmada ──► cancelada/rechazada/finalizada/no-show ] ──► [finalizada o no-show]
 
 ```
-Las transiciones tienen condiciones estrictas de tiempo y actor, principalmente se manejan en 3 tiempos, antes de aceptar la cita, cuando fue aceptada y despues de la hora agendada. Consulta la tabla completa y el diagrama en [BUSINESS RULES.md](./business_rules.md).
+Las transiciones tienen condiciones estrictas de tiempo y actor, principalmente se manejan en 3 tiempos, antes de aceptar la cita, cuando fue aceptada y despues de la hora agendada. Consulta la tabla completa y el diagrama en [`business_rules.md`](business_rules.md#3-módulo-de-gestión-de-citas).
 
 ### Penalizaciones
 Un `no-show` o una cancelación con menos de 20 horas de anticipación activa `penalizacionActiva = true` en el paciente, bloqueando nuevas citas hasta que se resuelva.
@@ -179,10 +178,9 @@ Un psicólogo solo puede acceder a los expedientes de sus propios pacientes. Cua
 
 ## 6. Estructura del Proyecto
 
-```
 | Estructura de Directorios y Archivos | Contenido y Responsabilidad |
 | :--- | :--- |
-| 📁 **`src/main/java/com.upsin.demo/`** | |
+| 📁 **src/main/java/com.upsin.demo/** | |
 | ├── 🛡️ `config/` | Seguridad global, filtros JWT, DatabaseSeeder |
 | ├── 🌐 `controllers/` | Controladores REST (lógica únicamente) |
 | │   └── 📄 `docs/` | Interfaces con anotaciones OpenAPI (contratos Swagger) |
@@ -192,11 +190,10 @@ Un psicólogo solo puede acceder a los expedientes de sus propios pacientes. Cua
 | ├── 🧠 `services/` | Lógica de negocio y validaciones |
 | └── 🛠️ `utils/` | Constantes y utilidades (JSONs de ejemplo para Swagger) |
 | | |
-| 🗄️ **`database/`** | |
+| 🗄️ **database/** | |
 | ├── 📜 `schema.sql` | DDL de tablas |
 | ├── ⚡ `Triggers.sql` | Triggers de auditoría |
 | └── 🧹 `Script de limpieza.sql` | |
-```
 
 ---
 
@@ -206,7 +203,7 @@ Un psicólogo solo puede acceder a los expedientes de sus propios pacientes. Cua
 - **DTOs:** un DTO por operación si los campos de entrada y salida difieren significativamente.
 - **Validaciones:** las reglas de negocio viven en la capa `services/`.
 - **Swagger:** si agregas o modificas un endpoint, actualiza la interfaz correspondiente en `controllers/docs/`.
-- **Triggers:** cualquier nueva necesidad de auditoría a nivel BD debe agregarse en `Triggers.sql` y documentarse en [BUSINESS RULES.md](./business_rules.md).
+- **Triggers:** cualquier nueva necesidad de auditoría a nivel BD debe agregarse en `Triggers.sql` y documentarse en [business_rules.md](business_rules.md).
 
 ---
 
@@ -217,7 +214,7 @@ Un psicólogo solo puede acceder a los expedientes de sus propios pacientes. Cua
    git checkout -b fix/validacion-cancelacion-anticipacion
    ```
 
-2. Asegúrate de que tu cambio no rompe ninguna regla de negocio existente en [BUSINESS RULES.md](./business_rules.md). Si la regla cambia, actualiza el documento.
+2. Asegúrate de que tu cambio no rompe ninguna regla de negocio existente en [business_rules.md](business_rules.md). Si la regla cambia, actualiza el documento.
 
 3. Si modificas lógica de citas, verifica manualmente los edge cases de expiración (BR-EDG-01 al 03) y el comportamiento del Cron Job.
 

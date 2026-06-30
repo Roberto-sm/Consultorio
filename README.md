@@ -1,8 +1,11 @@
 # API REST — Sistema de Gestión de Citas Psicológicas
 
-    Una API RESTful construida con Java 17 y Spring Boot 3 para gestionar el flujo operativo completo de un departamento psicológico: roles de usuario, agendamiento con validación de concurrencia, historiales clínicos con privacidad por especialista, y un sistema automatizado de penalizaciones y auditoría.
+```
+Una API RESTful construida con Java 17 y Spring Boot 3 para gestionar el flujo operativo completo de un departamento psicológico: roles de usuario, agendamiento con validación de concurrencia, historiales clínicos con privacidad por especialista, y un sistema automatizado de penalizaciones y auditoría.
+```
 
 Desarrollada con enfoque en Arquitectura Limpia, Seguridad (JWT) y Delegación de Responsabilidades a la Base de Datos (Triggers).
+🔗 [Documentación Swagger](https://consultorio-production-2605.up.railway.app/swagger-ui/index.html#/)
 
 ## ¿Por qué este proyecto?
 
@@ -29,7 +32,7 @@ La API cubre el flujo completo: autenticación por roles, agendamiento con valid
 
 🔗 [Documentación Swagger](https://consultorio-production-2605.up.railway.app/swagger-ui/index.html#/)
 
-Incluye usuarios de prueba listos para explorar los distintos flujos (penalización activa, derivación entre psicólogos, citas por finalizar, etc.). Ver detalles de uso en  [BUSINESS RULES.md](./docs/business_rules.md).
+Incluye usuarios de prueba listos para explorar los distintos flujos (penalización activa, derivación entre psicólogos, citas por finalizar, etc.). Ver detalles de uso en  [business_rules.md](./docs/business_rules.md).
 
 Usuarios: 
 
@@ -47,10 +50,9 @@ Java 17 · Spring Boot 3 (Web, Data JPA, Security, Validation) · MySQL 8.4 · S
 
 ## Estructura del Proyecto
 
-```
 | Estructura de Directorios y Archivos | Contenido y Responsabilidad |
 | :--- | :--- |
-| 📁 **`src/main/java/com.upsin.demo/`** | |
+| 📁 **src/main/java/com.upsin.demo/** | |
 | ├── 🛡️ `config/` | Seguridad global, filtros JWT, DatabaseSeeder |
 | ├── 🌐 `controllers/` | Controladores REST (lógica únicamente) |
 | │   └── 📄 `docs/` | Interfaces con anotaciones OpenAPI (contratos Swagger) |
@@ -60,11 +62,11 @@ Java 17 · Spring Boot 3 (Web, Data JPA, Security, Validation) · MySQL 8.4 · S
 | ├── 🧠 `services/` | Lógica de negocio y validaciones |
 | └── 🛠️ `utils/` | Constantes y utilidades (JSONs de ejemplo para Swagger) |
 | | |
-| 🗄️ **`database/`** | |
+| 🗄️ **database/** | |
 | ├── 📜 `schema.sql` | DDL de tablas |
 | ├── ⚡ `Triggers.sql` | Triggers de auditoría |
 | └── 🧹 `Script de limpieza.sql` | |
-```
+
 
 ## Instalación Rápida
 
@@ -75,7 +77,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-Requiere MySQL 8.4 corriendo localmente y la base `gestor_psicologico` creada. Guía completa de configuración, ejecución de triggers y variables de entorno en [CONTRIBUTING.md](./contributing.md#3-instalación-local).
+Requiere MySQL 8.4 corriendo localmente y la base `gestor_psicologico` creada. Guía completa de configuración, ejecución de triggers y variables de entorno en [contributing.md](./docs/contributing.md#3-instalación-local).
 
 ## Documentación Adicional
 
