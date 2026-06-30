@@ -120,6 +120,41 @@ Todos los endpoints `POST`/`PUT` en Swagger incluyen ejemplos de Request Body li
 
 Antes de modificar cualquier lógica de citas o expedientes, familiarízate con estas restricciones. La especificación completa está en [`bussines_rules.md`](./BUSINESS_RULES.md).
 
+Diagrama Autenticacion del token (JWT)
+
+sequenceDiagram
+    autonumber
+    actor Cliente as Cliente (Postman/Frontend)
+    participant Auth as AuthController<br/>(POST /api/auth/login)
+    participant Service as AuthService<br/>(Validación & JWT)
+    participant Filter as JwtFilter<br/>(Interceptor)
+    participant Endpoint as Endpoint Protegido<br/>(ej. /api/citas)
+
+    Note over Cliente, Service: FASE 1: Autenticación e Inicio de Sesión
+    Cliente->>Auth: 1. POST /login (correo, contraseña plana)
+    Auth->>Service: 2. Ejecuta verificación
+    Service->>Service: 3. BCrypt.matches(plana, hash_BD)
+    
+    alt Contraseña Incorrecta
+        Service-->>Cliente: 4a. Responder 401 Unauthorized
+    else Contraseña Correcta
+        Service->>Service: 4b. Fabricar Claims (ID, Rol)
+        Service-->>Cliente: 5. Retorna AuthResponse (JWT Token Real, Expira 24h)
+    end
+
+    Note over Cliente, Endpoint: FASE 2: Consumo de Recursos Protegidos
+    Cliente->>Filter: 6. Request HTTP + Header (Authorization: Bearer <token>)
+    Filter->>Filter: 7. Extrae el Token del encabezado
+    
+    alt Token Ausente, Expirado o Falsificado
+        Filter-->>Cliente: 8a. Bloquea Petición (403 Forbidden / 401)
+    else Token Válido
+        Filter->>Filter: 8b. Extrae Claims (ID, Rol) de JwtUtil
+        Filter->>Filter: 9. Inyecta Rol como Autoridad en Spring Security Context
+        Filter->>Endpoint: 10. Cede el control al Controller de la ruta
+        Endpoint-->>Cliente: 11. Responde con Datos Clínicos (200 OK)
+    end
+
 ### Agendamiento
 - Duración fija de **50 minutos**, solo en punto (09:00, 10:00… no 10:13).
 - Horario operativo: **lunes a viernes, 09:00–18:00**. Bloqueado de 14:00 a 15:00.
@@ -129,13 +164,10 @@ Antes de modificar cualquier lógica de citas o expedientes, familiarízate con 
 ### Máquina de estados de citas
 
 ```
-pendiente ──► confirmada ──► finalizada
-    │               │
-    ▼               ▼
-rechazada       cancelada / no-show
-```
+[pendiente ──► confirmada/rechazada] ──► [confirmada ──► cancelada/rechazada/finalizada/no-show ] ──► [finalizada o no-show]
 
-Las transiciones tienen condiciones estrictas de tiempo y actor. Consulta la tabla completa en `BUSINESS_RULES.md §3`.
+```
+Las transiciones tienen condiciones estrictas de tiempo y actor, principalmente se manejan en 3 tiempos, antes de aceptar la cita, cuando fue aceptada y despues de la hora agendada. Consulta la tabla completa y el diagrama en [BUSINESS RULES.md](./business_rules.md).
 
 ### Penalizaciones
 Un `no-show` o una cancelación con menos de 20 horas de anticipación activa `penalizacionActiva = true` en el paciente, bloqueando nuevas citas hasta que se resuelva.
@@ -148,20 +180,22 @@ Un psicólogo solo puede acceder a los expedientes de sus propios pacientes. Cua
 ## 6. Estructura del Proyecto
 
 ```
-src/main/java/com.upsin.demo/
-├── config/           # Seguridad global, filtros JWT, DatabaseSeeder
-├── controllers/      # Controladores REST (lógica únicamente)
-│   └── docs/         # Interfaces con anotaciones OpenAPI (contratos Swagger)
-├── dtos/             # Objetos de transferencia de datos (request/response)
-├── models/           # Entidades JPA
-├── repositories/     # Interfaces Spring Data JPA
-├── services/         # Lógica de negocio y validaciones
-└── utils/            # Constantes y utilidades (JSONs de ejemplo para Swagger)
-
-database/
-├── schema.sql        # DDL de tablas
-├── Triggers.sql      # Triggers de auditoría 
-└── Script de limpieza.sql 
+| Estructura de Directorios y Archivos | Contenido y Responsabilidad |
+| :--- | :--- |
+| 📁 **`src/main/java/com.upsin.demo/`** | |
+| ├── 🛡️ `config/` | Seguridad global, filtros JWT, DatabaseSeeder |
+| ├── 🌐 `controllers/` | Controladores REST (lógica únicamente) |
+| │   └── 📄 `docs/` | Interfaces con anotaciones OpenAPI (contratos Swagger) |
+| ├── 📦 `dtos/` | Objetos de transferencia de datos (request/response) |
+| ├── 🗃️ `models/` | Entidades JPA |
+| ├── 💾 `repositories/` | Interfaces Spring Data JPA |
+| ├── 🧠 `services/` | Lógica de negocio y validaciones |
+| └── 🛠️ `utils/` | Constantes y utilidades (JSONs de ejemplo para Swagger) |
+| | |
+| 🗄️ **`database/`** | |
+| ├── 📜 `schema.sql` | DDL de tablas |
+| ├── ⚡ `Triggers.sql` | Triggers de auditoría |
+| └── 🧹 `Script de limpieza.sql` | |
 ```
 
 ---
@@ -172,7 +206,7 @@ database/
 - **DTOs:** un DTO por operación si los campos de entrada y salida difieren significativamente.
 - **Validaciones:** las reglas de negocio viven en la capa `services/`.
 - **Swagger:** si agregas o modificas un endpoint, actualiza la interfaz correspondiente en `controllers/docs/`.
-- **Triggers:** cualquier nueva necesidad de auditoría a nivel BD debe agregarse en `Triggers.sql` y documentarse en `BUSINESS_RULES.md`.
+- **Triggers:** cualquier nueva necesidad de auditoría a nivel BD debe agregarse en `Triggers.sql` y documentarse en [BUSINESS RULES.md](./business_rules.md).
 
 ---
 
@@ -183,7 +217,7 @@ database/
    git checkout -b fix/validacion-cancelacion-anticipacion
    ```
 
-2. Asegúrate de que tu cambio no rompe ninguna regla de negocio existente en `BUSINESS_RULES.md`. Si la regla cambia, actualiza el documento.
+2. Asegúrate de que tu cambio no rompe ninguna regla de negocio existente en [BUSINESS RULES.md](./business_rules.md). Si la regla cambia, actualiza el documento.
 
 3. Si modificas lógica de citas, verifica manualmente los edge cases de expiración (BR-EDG-01 al 03) y el comportamiento del Cron Job.
 

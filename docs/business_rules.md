@@ -1,6 +1,6 @@
 # Especificación de Reglas de Negocio y Flujos Clínicos
 
-Este documento define la lógica de dominio, restricciones temporales, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas garantizan la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica.
+Este documento define la lógica de dominio, restricciones temporales, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas garantizan la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica. Para mas informacion acerca del proyecto vease tambien [CONTRIBUTING.md](./CONTRIBUTING.md#3-instalación-local).
 
 ## Tabla de Contenidos
 
@@ -11,6 +11,13 @@ Este documento define la lógica de dominio, restricciones temporales, control d
 5. [Permisos por Rol (Resumen)](#5-permisos-por-rol-resumen)
 
 ---
+
+## Diagrama entidad-relacion
+
+![Diagrama entidad-relacion](images/Entidad%20relacion.png)
+
+Las tablas auditoria_citas y auditoria_pacientes no estan relacionadas para no comprometer los datos de las tablas que interfieren en ellas y no estar ligados directamente.
+
 
 ## 1. Módulo de Autenticación y Seguridad
 
@@ -79,7 +86,7 @@ Este documento define la lógica de dominio, restricciones temporales, control d
 | BR-CIT-03 | Anticipación mínima | No se permiten reservas para el mismo día. Toda cita requiere mínimo 24 horas de anticipación. | `400` |
 | BR-CIT-04 | Regla de oro de concurrencia | Máximo 1 cita por hora por psicólogo. Si existe una cita `pendiente` o `confirmada` en ese horario, la nueva solicitud se rechaza. | `409` |
 | BR-CIT-05 | Fechas pasadas | No está permitido crear citas (estado inicial `pendiente`) con fecha y hora que ya transcurrieron en el servidor. | `400` |
-| <a name="br-cit-06"></a>BR-CIT-06 | Asignación automática de médico | Si es la primera cita del paciente y su campo `psicólogo` es nulo, el sistema lo vincula al psicólogo de planta. Posteriormente, el psicólogo evalúa si es necesario derivarlo. Ver [BR-RPA-05](#br-rpa-05). | — |
+| BR-CIT-06 | Asignación automática de médico | Si es la primera cita del paciente y su campo `psicólogo` es nulo, el sistema lo vincula al psicólogo de planta. Posteriormente, el psicólogo evalúa si es necesario derivarlo. Ver [BR-RPA-05](#br-rpa-05). | — |
 
 ### 3.2 Sistema de Penalizaciones
 
@@ -89,7 +96,7 @@ Este documento define la lógica de dominio, restricciones temporales, control d
 | BR-PEN-02 | Penalización por cancelación tardía | Cancelar una cita `confirmada` con menos de 20 horas de anticipación genera penalización y `multaAplicada = true` en la cita. | — |
 | BR-PEN-03 | Bloqueo preventivo | Un paciente con `penalizacionActiva = true` no puede agendar nuevas citas hasta que su estado sea resuelto. | `403` |
 
-### 3.3 Máquina de Estados de Citas
+## 3.3 Máquina de Estados de Citas
 
 El sistema controla de forma estricta las transiciones entre estados. Ninguna transición no listada aquí es válida.
 
@@ -121,7 +128,7 @@ El sistema controla de forma estricta las transiciones entre estados. Ninguna tr
 | BR-EST-05 | Antes y después de la consulta | Una cita `confirmada` puede cancelarse si aún no ha llegado su hora. Una vez que la hora transcurrió, solo puede marcarse como `finalizada` o `no-show`. |
 | BR-EST-06 | Recuperación de rechazos | Una cita `rechazada` puede revertirse a `confirmada` únicamente si el rechazo fue hecho manualmente (no por el Cron Job). |
 | BR-EST-07 | Recuperación de cancelaciones | Una cita `cancelada` solo puede reactivarse a `confirmada`. |
-| BR-EST-08 | Cierres administrativos | `finalizada` y `no-show` pueden intercambiarse entre sí para correcciones posteriores a la consulta (24 hrs despues). |
+| BR-EST-08 | Cierres administrativos | `finalizada` y `no-show` pueden intercambiarse entre sí para correcciones posteriores a la consulta, pero solo durante las 24 hrs despues de realizarse la primera accion. |
 | BR-EST-09 | Trazabilidad de citas | Todo `UPDATE` en la tabla `citas` (cambio de fecha o de estado) debe capturarse de forma asíncrona mediante un Trigger hacia `auditoria_citas`, registrando: ID propio, ID de cita, valores anteriores y nuevos (fecha y estado). |
 
 ### 3.4 Edge Cases de Expiración
