@@ -1,118 +1,183 @@
-# Especificación Detallada de Reglas de Negocio y Flujo Clínicos
+# Especificación de Reglas de Negocio y Flujos Clínicos
 
-Este documento detalla la lógica de dominio, restricciones de tiempo, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas aseguran la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica.
+Este documento define la lógica de dominio, restricciones temporales, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas garantizan la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica.
 
-## 1. Modulo de Autenticación y Seguridad
+## Tabla de Contenidos
 
-1.1 Registro de Pacientes
-BR-RPA-1: El sistema debe requerir un formato de correo electrónico válido (debe llevar "@" seguido de un texto y despues ".com") y una contraseña para procesar la solicitud.
+1. [Módulo de Autenticación y Seguridad](#1-módulo-de-autenticación-y-seguridad)
+2. [Módulo de Directorio Médico](#2-módulo-de-directorio-médico)
+3. [Módulo de Gestión de Citas](#3-módulo-de-gestión-de-citas)
+4. [Módulo de Expedientes Clínicos y Seguimiento](#4-módulo-de-expedientes-clínicos-y-seguimiento)
+5. [Permisos por Rol (Resumen)](#5-permisos-por-rol-resumen)
 
-BR-RPA-2: El correo electrónico ingresado debe ser único en toda la base de datos. Si el correo ya existe, se debe rechazar con un error 400 Bad Request.
+---
 
-BR-RPA-3 (Asignación de Rol): El sistema debe asignar forzosamente y de manera interna el rol de paciente, ignorando cualquier rol que el usuario intente enviarse a sí mismo en la petición (prevención de escalado de privilegios).
+## 1. Módulo de Autenticación y Seguridad
 
-BR-RPA-4 (Expediente Automático): Al registrarse exitosamente, el sistema debe disparar un evento interno que cree un registro de Historial Clínico (Expediente) totalmente en blanco y vinculado a este nuevo paciente.
+### 1.1 Registro de Pacientes
 
-BR-RPA-5 (Asignación de Especialista): El paciente recién creado debe ser asignado internamente a un "Psicólogo de Planta" disponible por defecto, o en su defecto, quedar en estado "sin asignar" hasta su primera cita.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-RPA-01 | Formato de correo | El sistema requiere un correo con formato válido (dominio con `@` y extensión) y una contraseña. | `400` |
+| BR-RPA-02 | Unicidad | El correo debe ser único en toda la base de datos. Si ya existe, se rechaza. | `400` |
+| BR-RPA-03 | Asignación de rol | El sistema asigna forzosamente el rol `PACIENTE`, ignorando cualquier rol que el cliente envíe en la petición (prevención de escalado de privilegios). | — |
+| BR-RPA-04 | Expediente automático | Al registrarse exitosamente, se dispara un evento interno que crea un Historial Clínico en blanco vinculado al nuevo paciente. | — |
+| BR-RPA-05 | Asignación de especialista | El paciente queda asignado al "Psicólogo de Planta" disponible por defecto, o en estado `sin asignar` hasta su primera cita. Ver también [BR-CIT-06](#br-cit-06). | — |
 
+### 1.2 Registro de Psicólogos
 
-1.2. Registro de Psicologos
-BR-RPS-1 (Unicidad): Al igual que los pacientes, el correo debe ser estrictamente único.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-RPS-01 | Unicidad | El correo debe ser estrictamente único, igual que para pacientes. | `400` |
+| BR-RPS-02 | Asignación de rol | El sistema asigna forzosamente el rol `PSICOLOGO`. | — |
+| BR-RPS-03 | Especialidades | El psicólogo puede vincularse a una o más especialidades del catálogo al momento de su creación (relación Muchos a Muchos). | `400` |
 
-BR-RPS-2 (Asignación de Rol): El sistema debe asignar forzosamente el rol de psicologo.
+### 1.3 Inicio de Sesión
 
-BR-RPS-3 (Especialidades): El psicólogo debe poder ser vinculado a una o más especialidades (relación Muchos a Muchos) existentes en el catálogo del sistema al momento de su creación.
+| Código | Descripción | HTTP |
+|---|---|---|
+| BR-LOG-01 | Las contraseñas nunca se comparan en texto plano; el sistema verifica el hash usando el algoritmo configurado (BCrypt). | `401` |
+| BR-LOG-02 | Tras autenticación exitosa, se emite un JWT firmado con los claims de identidad (ID, Rol) y expiración de 24 horas. | — |
+| BR-LOG-03 | Cualquier acceso a endpoints protegidos sin un JWT válido, expirado o malformado se rechaza inmediatamente. | `401` |
 
-
-1.3. Inicio de Sesión (Login)
-BR-LOG-1: Las contraseñas nunca deben ser comparadas en texto plano; el sistema debe verificar el hash encriptado utilizando el algoritmo de seguridad configurado (ej. BCrypt).
-
-BR-LOG-2: Tras una autenticación exitosa, el sistema debe emitir un Token JWT (JSON Web Token) firmado, el cual contendrá los claims de identidad (ID, Rol) y tendrá un tiempo de expiración definido (24 hrs).
-
-BR-LOG-3: Cualquier intento de acceso a endpoints protegidos sin un Token JWT válido, expirado o malformado debe ser rechazado inmediatamente con un código de estado 401 Unauthorized.
+---
 
 ## 2. Módulo de Directorio Médico
 
-2.1. Obtener todos los psicólogos
-BR-DIR-1 (Exposición de Datos Sensibles): El endpoint público/protegido que devuelve la lista de psicólogos NUNCA debe devolver las contraseñas (ni siquiera hasheadas) u otros datos sensibles del modelo de Usuario, en produccion este endpoint estaria limitado al rol de administrador.
+### 2.1 Obtener todos los psicólogos
 
-BR-DIR-2 (Paginación): Si el volumen de psicólogos es alto, la respuesta debe estar paginada para no comprometer el rendimiento del servidor.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-DIR-01 | Exposición de datos sensibles | El endpoint nunca devuelve contraseñas (ni hasheadas) ni otros datos sensibles. En producción, estará limitado al rol administrador. | — |
+| BR-DIR-02 | Paginación | Si el volumen de psicólogos es alto, la respuesta debe paginarse para no comprometer el rendimiento. | — |
 
-2.2. Buscar psicólogos por especialidad
-BR-DIR-3 (Filtro Relacional): El sistema debe ser capaz de filtrar el catálogo de psicólogos devolviendo únicamente aquellos que tengan en su arreglo de especialidades la especialidad solicitada (por ID o por Nombre de especialidad).
+### 2.2 Buscar psicólogos por especialidad
 
-BR-DIR-4 (Manejo de Vacíos): Si se busca una especialidad que no tiene ningún psicólogo asignado en ese momento, el sistema debe devolver una lista vacía [] con código 200 OK, no un error del servidor.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-DIR-03 | Filtro relacional | El sistema filtra el catálogo devolviendo únicamente psicólogos que tengan la especialidad solicitada (por ID o por nombre). | — |
+| BR-DIR-04 | Manejo de vacíos | Si ningún psicólogo tiene la especialidad buscada, se devuelve `[]` con código `200 OK`, no un error del servidor. | `200` |
 
-2.3. Actualizar el perfil de un psicólogo
-BR-PRF-1 (Autorización Propietaria): Un psicólogo SOLO puede actualizar su propio perfil. El sistema debe comparar el ID enviado en la petición con el ID extraído del Token JWT del usuario que hace la llamada. Si no coinciden, se rechaza con 403 Forbidden.
+### 2.3 Actualizar perfil de un psicólogo
 
-## 3. Módulo de Gestión de Citas (Agendamiento)
- 
-3.1. Concurrencia y Restricciones de Tiempo
-BR-CIT-1 (Duración Estandarizada): Todas las citas tienen una duración fija de 50 minutos. El sistema rechaza cualquier intento de reserva en minutos arbitrarios (ej. 10:13 AM); las citas solo pueden agendarse estrictamente en punto (ej. 09:00, 10:00, 11:00, etc.).
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-PRF-01 | Autorización propietaria | Un psicólogo solo puede actualizar su propio perfil. El sistema compara el ID de la petición con el ID extraído del JWT. Si no coinciden, se rechaza. | `403` |
 
-BR-CIT-2: Las citas deben ser agendadas con horario de las 09:00 a las 18:00 hrs de lunes a viernes (ultima cita disponible 18:00 - 18:50), y de las 09:00 a las 13:00 hrs. De lunes a viernes existe el bloqueo de las 14:00 a las 15:00 hrs (hora de comida) 
+---
 
-BR-CIT-3: Anticipación Mínima: No se permiten reservas para el mismo día. Toda cita debe agendarse con un mínimo de 24 horas de anticipación.
+## 3. Módulo de Gestión de Citas
 
-BR-CIT-4 (Regla de Oro de Concurrencia): El sistema prohíbe estrictamente agendar más de una cita en la misma fecha y hora exacta con el mismo psicólogo, si existe una cita pendiente o confirmada en ese horario se marcará como error. Validar solapamientos (ej. máximo 1 cita por hora por doctor).
+> **BR-CIT-00 — Huso horario base:** Todas las validaciones temporales, expiración de citas, mantenimientos automatizados y cruces de agenda se calculan bajo la zona horaria `America/Mazatlan`.
 
-BR-CIT-5 (Fechas Pasadas): No está permitido agendar nuevas citas (estado inicial pendiente) con fechas y horas que ya hayan transcurrido en el servidor.
+### 3.1 Concurrencia y Restricciones de Tiempo
 
-BR-CIT-6 (Asignación Automática de Médico): Si es la primera vez que un paciente agenda y su campo psicologo es nulo, el sistema debe vincularlo al psicologo de planta al menos la primera cita, despues el psicologo evalua si es necesario derivarlo con otro psicologo.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-CIT-01 | Duración estandarizada | Todas las citas duran exactamente 50 minutos. Solo pueden agendarse en punto (09:00, 10:00…). Se rechaza cualquier minuto arbitrario (ej. 10:13). | `400` |
+| BR-CIT-02 | Horario operativo | Las citas se agendan de lunes a viernes, de 09:00 a 18:00 (última cita: 18:00–18:50). Existe un bloqueo de 14:00 a 15:00 (hora de comida). | `400` |
+| BR-CIT-03 | Anticipación mínima | No se permiten reservas para el mismo día. Toda cita requiere mínimo 24 horas de anticipación. | `400` |
+| BR-CIT-04 | Regla de oro de concurrencia | Máximo 1 cita por hora por psicólogo. Si existe una cita `pendiente` o `confirmada` en ese horario, la nueva solicitud se rechaza. | `409` |
+| BR-CIT-05 | Fechas pasadas | No está permitido crear citas (estado inicial `pendiente`) con fecha y hora que ya transcurrieron en el servidor. | `400` |
+| <a name="br-cit-06"></a>BR-CIT-06 | Asignación automática de médico | Si es la primera cita del paciente y su campo `psicólogo` es nulo, el sistema lo vincula al psicólogo de planta. Posteriormente, el psicólogo evalúa si es necesario derivarlo. Ver [BR-RPA-05](#br-rpa-05). | — |
 
+### 3.2 Sistema de Penalizaciones
 
-3.2. Sistema de Penalizaciones (Multas)
-BR-PEN-1 (Penalizacion por no-show): Si cualquier cita del paciente es marcada con el estado no-show (inasistencia), el campo multaAplicada de esa cita pasará a true, lo cual debe cambiar el estado del paciente a penalizacionActiva = true, asi como el campo multa_aplicada para marcar la cita a la que corresponde esa penalizacion.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-PEN-01 | Penalización por no-show | Si una cita se marca como `no-show`, el campo `multaAplicada` pasa a `true` y el paciente recibe `penalizacionActiva = true`. | — |
+| BR-PEN-02 | Penalización por cancelación tardía | Cancelar una cita `confirmada` con menos de 20 horas de anticipación genera penalización y `multaAplicada = true` en la cita. | — |
+| BR-PEN-03 | Bloqueo preventivo | Un paciente con `penalizacionActiva = true` no puede agendar nuevas citas hasta que su estado sea resuelto. | `403` |
 
-BR-PEN-2 (Penalizacion por cancelacion): Si un paciente decide cancelar una cita que ya habia sido aprobada por el psicologo menos de 20 horas antes de la sesion, recibirá una penalizacion y la cita tendrá una multa aplicada
+### 3.3 Máquina de Estados de Citas
 
-BR-PEN-3 (Bloqueo Preventivo): Si un paciente tiene el estatus penalizacionActiva = true, el sistema debe denegar inmediatamente cualquier intento de agendar nuevas citas (HTTP 403 o 400).
-
---- Máquina de Estados de Citas (Transiciones) --- 
-El sistema maneja un control estricto sobre cómo una cita puede cambiar de estado (Pendiente, Confirmada, Cancelada, Rechazada, Finalizada, No-show). 
+El sistema controla de forma estricta las transiciones entre estados. Ninguna transición no listada aquí es válida.
 
 ![Grafo de maquina de estados](images/Estados%20Citas.png)
 
-3.3. Transiciones Activas
-BR-EST-1 (Ciclo de Vida Ideal): Una cita normal transiciona de pendiente -> confirmada -> finalizada.
+#### Tabla de transiciones
 
-BR-EST-2: una cita agendada por un psicologo toma el estado "confirmada" automaticamente 
+| Estado origen | Estado destino | Actor | Condición |
+|---|---|---|---|
+| `pendiente` | `confirmada` | Psicólogo | Dentro de las 24 h posteriores a la creación |
+| `pendiente` | `rechazada` | Psicólogo / Cron Job | Dentro de 24 h, o bien, hora de cita ya transcurrió sin respuesta |
+| `confirmada` | `cancelada` | Psicólogo / Paciente | Antes de que llegue la hora de la cita (si la cita estaba confirmada y el paciente cancela se le hace una multa) |
+| `confirmada` | `rechazada` | Psicólogo | durante las 24 hrs despues de confirmar. Este estado está para prevenir el "error de dedo" y poder revertir una decision |
+| `confirmada` | `finalizada` | Psicólogo | Después de que concluyó la cita (`fechaHora < NOW()`) |
+| `confirmada` | `no-show` | Psicólogo | Después de que concluyó la cita y el paciente no asistió |
+| `rechazada` | `confirmada` | Psicólogo | Solo si el rechazo fue manual "error de dedo" (no por Cron Job) |
+| `cancelada` | `confirmada` | Psicólogo | Sin restricciones adicionales, igual aplica el "error de dedo" |
+| `finalizada` | `no-show` | Psicólogo | Corrección administrativa - "error de dedo"|
+| `no-show` | `finalizada` | Psicólogo | Corrección administrativa - "error de dedo"|
 
-BR-EST-2: Todas las citas pueden cambiar de estado segun lo permita el sistema en un lapso de 24 horas, pasado el tiempo no podrá cambiar de estado.
+#### Reglas de transición (detalle)
 
-BR-EST-3: una cita pendiente solo puede marcarse como confirmada o rechazada durante las 24 horas posteriores de hacer la selección; una cita que fue rechazada automáticamente por el Cron job no puede cambiar su estado.
+| Código | Nombre | Descripción |
+|---|---|---|
+| BR-EST-01 | Ciclo de vida ideal | Una cita transiciona normalmente: `pendiente → confirmada → finalizada`. |
+| BR-EST-02 | Agendamiento interno | Una cita creada por el propio psicólogo toma el estado `confirmada` automáticamente. |
+| BR-EST-03 | Ventana de transición | Los cambios de estado están permitidos dentro de las 24 horas desde la acción que los origina; pasado ese tiempo, el estado queda bloqueado, exceptuando los estados `pendiente` y `confirmada`. |
+| BR-EST-04 | Resolución de pendientes | Una cita `pendiente` solo puede volverse `confirmada` o `rechazada`, una vez hecho el cambio dentro de las 24 h posteriores a su creación. Una cita rechazada por el Cron Job no puede cambiar de estado. |
+| BR-EST-05 | Antes y después de la consulta | Una cita `confirmada` puede cancelarse si aún no ha llegado su hora. Una vez que la hora transcurrió, solo puede marcarse como `finalizada` o `no-show`. |
+| BR-EST-06 | Recuperación de rechazos | Una cita `rechazada` puede revertirse a `confirmada` únicamente si el rechazo fue hecho manualmente (no por el Cron Job). |
+| BR-EST-07 | Recuperación de cancelaciones | Una cita `cancelada` solo puede reactivarse a `confirmada`. |
+| BR-EST-08 | Cierres administrativos | `finalizada` y `no-show` pueden intercambiarse entre sí para correcciones posteriores a la consulta (24 hrs despues). |
+| BR-EST-09 | Trazabilidad de citas | Todo `UPDATE` en la tabla `citas` (cambio de fecha o de estado) debe capturarse de forma asíncrona mediante un Trigger hacia `auditoria_citas`, registrando: ID propio, ID de cita, valores anteriores y nuevos (fecha y estado). |
 
-BR-EST-4: una cita confirmada puede marcarse como rechazada o cancelada si aun no ha llegado la hora de la cita, por otro lado una vez terminada la cita (no durante ni antes) solo puede cambiar su estado a finalizada o no-show.
+### 3.4 Edge Cases de Expiración
 
-BR-EST-5: una cita rechazada solo puede cambiarse a confirmada solo si no fue rechazada por el cron job
+| Código | Nombre | Descripción |
+|---|---|---|
+| BR-EDG-01 | Finalización prematura | Está prohibido marcar una cita como `finalizada` si su `fechaHora` aún está en el futuro (`fechaHora > NOW()`). |
+| BR-EDG-02 | Cita pendiente expirada | Si la hora de la cita ya transcurrió y su estado era `pendiente`, se cambiará automaticamente a `rechazada` (cron job). |
+| BR-EDG-03 | Cita confirmada expirada | Si la hora de la cita ya transcurrió y estaba `confirmada`, los únicos estados de cierre son `finalizada` o `no-show`. |
 
-BR-EST-6: una cita cancelada solo puede ser confirmada de nuevo
+### 3.5 Mantenimiento Automatizado (Cron Job)
 
-BR-EST-7: Una cita finalizada solo puede cambiar a no-show y viceversa 
+| Código | Nombre | Descripción |
+|---|---|---|
+| BR-CRN-01 | Proceso independiente | El Cron Job se ejecuta periódicamente (cada hora) de forma independiente a las peticiones HTTP, bajo el huso horario `America/Mazatlan`. |
+| BR-CRN-02 | Limpieza por omisión | El proceso busca citas que cumplan dos condiciones simultáneas: estado `pendiente` **y** `fecha_hora < NOW()`. |
+| BR-CRN-03 | Transición de expiración | Las citas identificadas por BR-CRN-02 se mutan automáticamente a `rechazada`. Las citas en estado `confirmada` no son alteradas por este proceso; requieren intervención manual del psicólogo. |
 
-BR-EST-8 (Trazabilidad de Citas): Todo UPDATE efectuado en la tabla citas (cambio de fecha o de estado) debe ser capturado obligatoriamente de forma asíncrona mediante un Trigger a nivel base de datos hacia la tabla auditoria_citas que cuenta con su propio id, el id de la cita y los valores viejos y nuevos como la fecha y el estado.
-
-
-3.4. Edge Cases de Expiración de Tiempo
-BR-EST-1 (Finalización Prematura): Es lógicamente imposible y está prohibido marcar una cita como finalizada si su fecha y hora aún están en el futuro (fechaHora > NOW()).
-
-BR-EST-2 (Cita Pendiente Expirada): Si la hora de una cita ya transcurrió en el reloj del servidor y su estado seguía siendo pendiente, el único cambio de estado permitido será a rechazada, ya que nunca se confirmó ni se canceló.
-
-BR-EST-3 (Cita Confirmada Expirada): Si la hora de una cita ya transcurrió y estaba confirmada, los únicos estados permitidos para su cierre son finalizada (si ocurrió la consulta) o no-show (si el paciente no llegó).
-
+---
 
 ## 4. Módulo de Expedientes Clínicos y Seguimiento
 
-4.1. Privacidad del Historial Clínico
-BR-EXP-01 (Cerco de Seguridad Médico-Paciente): Un psicólogo SOLAMENTE tiene permisos para visualizar, consultar o actualizar los historiales clínicos de los pacientes que están directamente asignados a su ID. Si intenta acceder al expediente de un paciente asignado a otro colega, el sistema arrojará 403 Forbidden.
+### 4.1 Privacidad del Historial Clínico
 
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-EXP-01 | Cerco de seguridad médico-paciente | Un psicólogo solo puede visualizar, consultar o actualizar los historiales de los pacientes **directamente asignados a su ID**. El acceso al expediente de un paciente de otro colega se rechaza. | `403` |
 
-4.2. Notas de Evolución
-BR-NOT-1 (Condición de Creación): Una Nota de Evolución (que incluye diagnóstico y plan de tratamiento) solo puede ser creada e insertada si está estrictamente ligada al ID de una cita cuyo estado sea finalizada.
+### 4.2 Notas de Evolución
 
-BR-NOT-2 (Inmutabilidad del Histórico): Las notas de evolución firmadas y vinculadas a una cita pasada deben tratarse como documentos médicos inmutables de solo lectura, agregándose progresivamente al expediente del paciente.
+| Código | Nombre | Descripción | HTTP |
+|---|---|---|---|
+| BR-NOT-01 | Condición de creación | Una Nota de Evolución (diagnóstico y plan de tratamiento) solo puede crearse si está ligada al ID de una cita cuyo estado sea `finalizada`. | `400` |
+| BR-NOT-02 | Inmutabilidad del histórico | Las notas firmadas vinculadas a una cita pasada son documentos médicos de **solo lectura**. Se agregan progresivamente al expediente; no pueden editarse ni eliminarse. | `403` |
 
-4.3 Derivar un paciente
-(Trazabilidad de Transferencias): Toda modificación en el campo id_psicologo de la tabla pacientes (cambiar a un paciente de doctor) debe registrar al doctor antiguo, el nuevo y la estampa de tiempo mediante Trigger hacia la tabla auditoria_pacientes que cuenta con su propio id, el id del paciente, el psicologo anterior y el nuevo.
+### 4.3 Derivar un Paciente
 
+| Código | Nombre | Descripción |
+|---|---|---|
+| BR-DER-01 | Trazabilidad de transferencias | Toda modificación del campo `id_psicologo` en la tabla `pacientes` dispara un Trigger hacia `auditoria_pacientes`, registrando: ID propio, ID del paciente, psicólogo anterior, psicólogo nuevo y marca de tiempo. |
+
+---
+
+## 5. Permisos por Rol (Resumen)
+
+| Acción | `PACIENTE` | `PSICOLOGO` |
+|---|:---:|:---:|
+| Registrarse | ✅ | ✅ |
+| Iniciar sesión | ✅ | ✅ |
+| Ver directorio de psicólogos | ✅ | ✅ |
+| Actualizar perfil propio | ✅ | ✅ |
+| Agendar cita | ✅ (si sin penalización) | ✅ (confirma automáticamente) |
+| Confirmar / rechazar cita ajena | ❌ | ✅ |
+| Cancelar cita propia | ✅ | ✅ |
+| Marcar `finalizada` / `no-show` | ❌ | ✅ |
+| Ver expediente clínico | ❌ | Solo pacientes asignados |
+| Crear nota de evolución | ❌ | ✅ (cita finalizada) |
+| Editar nota de evolución | ❌ | ❌ (inmutable) |
+| Derivar paciente a otro psicólogo | ❌ | ✅ |
