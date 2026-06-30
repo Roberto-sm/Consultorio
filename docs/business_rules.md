@@ -1,6 +1,6 @@
 # Especificación de Reglas de Negocio y Flujos Clínicos
 
-Este documento define la lógica de dominio, restricciones temporales, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas garantizan la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica. Para mas informacion acerca del proyecto vease tambien [contributing.md](contributing.md#3-instalación-local).
+Este documento define la lógica de dominio, restricciones temporales, control de concurrencia y la máquina de estados que gobierna la API del Consultorio Psicológico. Estas reglas garantizan la integridad de los datos clínicos, previenen conflictos de agenda y automatizan la gestión administrativa de la clínica. Para mas informacion acerca del proyecto vease tambien [contributing.md](./docs/contributing.md#3-instalación-local).
 
 ## Tabla de Contenidos
 

@@ -1,8 +1,6 @@
 # API REST — Sistema de Gestión de Citas Psicológicas
 
-```
 Una API RESTful construida con Java 17 y Spring Boot 3 para gestionar el flujo operativo completo de un departamento psicológico: roles de usuario, agendamiento con validación de concurrencia, historiales clínicos con privacidad por especialista, y un sistema automatizado de penalizaciones y auditoría.
-```
 
 Desarrollada con enfoque en Arquitectura Limpia, Seguridad (JWT) y Delegación de Responsabilidades a la Base de Datos (Triggers).
 🔗 [Documentación Swagger](https://consultorio-production-2605.up.railway.app/swagger-ui/index.html#/)
